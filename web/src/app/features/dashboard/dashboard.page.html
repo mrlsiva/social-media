@@ -1,0 +1,107 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h1>{{ greeting }}, {{ auth.user()?.firstName }} 👋</h1>
+      <p>Here's what's happening across {{ scope() === 'brand' ? (brands.currentBrand()?.name ?? 'your brand') : 'all your brands' }}.</p>
+    </div>
+    <div class="segmented">
+      <button type="button" [class.active]="scope() === 'brand'" (click)="scope.set('brand')">Current brand</button>
+      <button type="button" [class.active]="scope() === 'all'" (click)="scope.set('all')">All brands</button>
+    </div>
+  </div>
+
+  @if (brands.loaded() && brands.brands().length === 0) {
+    <div class="card onboarding">
+      <div>
+        <h2>Let's set up your first brand</h2>
+        <p class="text-2 mt-8">Add a brand (e.g. Sling Groups), connect its social accounts, then create and publish content to every platform at once.</p>
+        <div class="row-wrap mt-16">
+          <a class="btn btn-primary" routerLink="/brands/new"><app-icon name="plus" /> Add brand</a>
+        </div>
+      </div>
+      <ol class="steps">
+        <li><b>1</b> Add a brand with logo & colours</li>
+        <li><b>2</b> Connect Instagram, Facebook, YouTube, LinkedIn</li>
+        <li><b>3</b> Generate content with AI</li>
+        <li><b>4</b> Publish to all - or schedule it</li>
+      </ol>
+    </div>
+  }
+
+  <div class="quick">
+    <a class="quick-card" routerLink="/posts/new"><span class="qi"><app-icon name="edit" /></span><div><b>Create Post</b><span>Image or carousel</span></div></a>
+    <a class="quick-card" routerLink="/reels/new"><span class="qi pink"><app-icon name="film" /></span><div><b>Create Reel</b><span>Short vertical video</span></div></a>
+    <a class="quick-card" routerLink="/ai"><span class="qi grad"><app-icon name="sparkles" /></span><div><b>AI Generate</b><span>Captions, images, reels</span></div></a>
+    <a class="quick-card" routerLink="/brands/new"><span class="qi green"><app-icon name="brands" /></span><div><b>Add Brand</b><span>Manage another business</span></div></a>
+  </div>
+
+  <div class="grid stats">
+    @for (s of stats(); track s.label) {
+      <div class="card stat">
+        <div class="stat-icon {{ s.tone }}"><app-icon [name]="s.icon" /></div>
+        <div><div class="stat-label">{{ s.label }}</div><div class="stat-value">{{ s.value | compact }}</div></div>
+      </div>
+    } @empty {
+      @for (i of [1,2,3,4]; track i) { <div class="card skeleton" style="height:84px"></div> }
+    }
+  </div>
+
+  <div class="grid two-col mt-24">
+    <div class="card">
+      <div class="card-header"><h2>Reach & engagement</h2><span class="muted small">Last 30 days</span></div>
+      <div class="card-body">
+        @if (analytics(); as a) {
+          @if (a.summary.reach + a.summary.engagement === 0) {
+            <div class="empty small"><p>No insights yet. Metrics are synced from connected platforms every 6 hours after you publish.</p></div>
+          } @else {
+            <app-chart [config]="chart()" [height]="260" />
+          }
+        } @else { <div class="skeleton" style="height:260px"></div> }
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h2>Upcoming</h2><a routerLink="/calendar" class="small">Calendar →</a></div>
+      <div class="list">
+        @for (p of data()?.upcoming ?? []; track p.id) {
+          <a class="list-item" [routerLink]="['/posts', p.id]">
+            <span class="when"><b>{{ p.scheduledAt | date: 'd MMM' }}</b><span>{{ p.scheduledAt | date: 'h:mm a' }}</span></span>
+            <span class="truncate">{{ p.title || p.caption || 'Untitled post' }}</span>
+            <span class="badge">{{ p.contentType }}</span>
+          </a>
+        } @empty {
+          <div class="empty small"><p>Nothing scheduled.</p><a class="btn btn-sm mt-8" routerLink="/posts/new">Schedule a post</a></div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="grid two-col mt-24">
+    <div class="card">
+      <div class="card-header"><h2>Recent posts</h2><a routerLink="/posts" class="small">View all →</a></div>
+      <div class="list">
+        @for (p of data()?.recentPosts ?? []; track p.id) {
+          <a class="list-item" [routerLink]="['/posts', p.id]">
+            <span class="truncate">{{ p.title || p.caption || 'Untitled post' }}</span>
+            <span class="muted small">{{ p.date | ago }}</span>
+            <app-status-badge [status]="p.status" />
+          </a>
+        } @empty { <div class="empty small"><p>No posts yet.</p></div> }
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h2>Publishing issues</h2><span class="muted small">Last 7 days</span></div>
+      <div class="list">
+        @for (f of data()?.recentFailures ?? []; track f.jobId) {
+          <a class="list-item" [routerLink]="['/posts', f.postId]">
+            <app-platform-icon [platform]="f.platform" [size]="24" />
+            <span class="fail-text"><b>{{ f.errorCode }}</b><span class="truncate">{{ f.errorMessage }}</span></span>
+            <span class="btn btn-sm">Review</span>
+          </a>
+        } @empty {
+          <div class="empty small"><div class="empty-icon" style="background:var(--success-50);color:var(--success)"><app-icon name="check" /></div><p>No failed publishing jobs.</p></div>
+        }
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,102 @@
+<div class="page">
+  <div class="page-header">
+    <div><h1>Media library</h1><p>Images, videos, logos and AI creations for <b>{{ brands.currentBrand()?.name }}</b>.</p></div>
+    <label class="btn btn-primary">
+      @if (uploading() > 0) { <span class="spinner"></span> Uploading {{ uploading() }}... } @else { <app-icon name="upload" /> Upload }
+      <input type="file" hidden multiple accept=".jpg,.jpeg,.png,.webp,.mp4,.mov" (change)="onFiles($any($event.target).files); $any($event.target).value = ''" />
+    </label>
+  </div>
+
+  <div class="layout">
+    <aside class="card folders">
+      <div class="folder-title">Folders</div>
+      <button class="folder" type="button" [class.active]="folderId() === ''" (click)="folderId.set('')"><app-icon name="grid" [size]="16" /> All media</button>
+      <button class="folder" type="button" [class.active]="folderId() === 'root'" (click)="folderId.set('root')"><app-icon name="layers" [size]="16" /> Unfiled</button>
+      @for (f of folders(); track f.id) {
+        <div class="folder-row">
+          <button class="folder" type="button" [class.active]="folderId() === f.id" (click)="folderId.set(f.id)">
+            <app-icon name="folder" [size]="16" /> <span class="truncate">{{ f.name }}</span> <span class="count">{{ f.mediaCount }}</span>
+          </button>
+          <button class="btn btn-ghost btn-icon btn-sm" type="button" (click)="deleteFolder(f)" title="Delete folder"><app-icon name="x" [size]="13" /></button>
+        </div>
+      }
+      <div class="row mt-8">
+        <input class="input" style="height:34px" placeholder="New folder" [(ngModel)]="newFolder" (keydown.enter)="createFolder()" />
+        <button class="btn btn-sm btn-icon" type="button" (click)="createFolder()"><app-icon name="plus" [size]="15" /></button>
+      </div>
+    </aside>
+
+    <section>
+      <div class="toolbar">
+        <div class="search"><app-icon name="search" [size]="16" />
+          <input placeholder="Search by name or tag" [ngModel]="search()" (ngModelChange)="search.set($event)" [ngModelOptions]="{ updateOn: 'blur' }" (keydown.enter)="search.set($any($event.target).value)" /></div>
+        <select class="select" style="width:150px" [ngModel]="type()" (ngModelChange)="type.set($event)">
+          <option value="">All types</option><option value="image">Images</option><option value="video">Videos</option><option value="logo">Logos</option><option value="thumbnail">Thumbnails</option>
+        </select>
+        <select class="select" style="width:170px" [ngModel]="source()" (ngModelChange)="source.set($event)">
+          <option value="">All sources</option><option value="upload">Uploaded</option><option value="ai_image">AI images</option><option value="ai_video">AI videos</option>
+        </select>
+      </div>
+
+      <div class="drop" [class.over]="dragOver()" (dragover)="$event.preventDefault(); dragOver.set(true)" (dragleave)="dragOver.set(false)" (drop)="onDrop($event)">
+        @if (items().length === 0 && !loading()) {
+          <div class="empty">
+            <div class="empty-icon"><app-icon name="image" /></div>
+            <h3>Drop files here</h3>
+            <p>JPG, PNG, WEBP up to 10 MB · MP4, MOV up to 500 MB</p>
+          </div>
+        } @else {
+          <div class="media-grid">
+            @for (m of items(); track m.id) {
+              <button class="tile" type="button" (click)="open(m)">
+                @if (m.mimeType.startsWith('video/')) {
+                  <video [src]="m.url" muted preload="metadata"></video>
+                  <span class="type"><app-icon name="play" [size]="12" /></span>
+                } @else { <img [src]="m.url" [alt]="m.name" loading="lazy" /> }
+                @if (m.source !== 'upload') { <span class="ai"><app-icon name="sparkles" [size]="12" /> AI</span> }
+                <span class="caption"><span class="truncate">{{ m.name }}</span><span>{{ m.sizeBytes | bytes }}</span></span>
+              </button>
+            }
+            @if (loading()) { @for (i of [1,2,3,4,5,6]; track i) { <div class="skeleton" style="aspect-ratio:1"></div> } }
+          </div>
+          @if (meta() && meta()!.page < meta()!.totalPages) {
+            <div class="row mt-16" style="justify-content:center"><button class="btn" type="button" (click)="loadMore()">Load more</button></div>
+          }
+        }
+      </div>
+    </section>
+  </div>
+
+  @if (preview(); as m) {
+    <app-modal [title]="m.name" size="lg" (closed)="preview.set(null)">
+      <div class="preview">
+        <div class="preview-media">
+          @if (m.mimeType.startsWith('video/')) { <video [src]="m.url" controls></video> } @else { <img [src]="m.url" [alt]="m.name" /> }
+        </div>
+        <div class="stack">
+          <div class="field"><label>Name</label><input class="input" [(ngModel)]="editName" /></div>
+          <div class="field"><label>Folder</label>
+            <select class="select" [(ngModel)]="editFolder"><option value="">Unfiled</option>
+              @for (f of folders(); track f.id) { <option [value]="f.id">{{ f.name }}</option> }</select></div>
+          <div class="meta-list small">
+            <div><span>Type</span><b>{{ m.mimeType }}</b></div>
+            <div><span>Size</span><b>{{ m.sizeBytes | bytes }}</b></div>
+            @if (m.width) { <div><span>Dimensions</span><b>{{ m.width }} × {{ m.height }}</b></div> }
+            @if (m.durationSeconds) { <div><span>Duration</span><b>{{ m.durationSeconds }}s</b></div> }
+            <div><span>Source</span><b>{{ m.source.replace('_', ' ') }}</b></div>
+            <div><span>Added</span><b>{{ m.createdAt | date: 'medium' }}</b></div>
+          </div>
+          <div class="row-wrap">
+            <button class="btn btn-primary" type="button" (click)="useInPost(m)"><app-icon name="send" [size]="15" /> Use in post</button>
+            <a class="btn" [href]="m.url" target="_blank" rel="noopener" download><app-icon name="download" [size]="15" /> Download</a>
+          </div>
+        </div>
+      </div>
+      <div modal-footer class="modal-footer">
+        <button class="btn btn-danger" type="button" style="margin-right:auto" (click)="remove(m)"><app-icon name="trash" [size]="15" /> Delete</button>
+        <button class="btn" type="button" (click)="preview.set(null)">Close</button>
+        <button class="btn btn-primary" type="button" (click)="saveMedia()">Save</button>
+      </div>
+    </app-modal>
+  }
+</div>

@@ -1,0 +1,80 @@
+<div class="tabs">
+  @for (p of tabs(); track p) {
+    <button type="button" [class.active]="active() === p" (click)="select(p)"><app-platform-icon [platform]="p" [size]="18" /> {{ meta[p].name }}</button>
+  }
+</div>
+
+<div class="stage">
+  @switch (active()) {
+    <!-- Instagram -->
+    @case ('instagram') {
+      <div class="phone ig">
+        <div class="ig-head">
+          <span class="ava" [style.background]="brand()?.primaryColor ?? '#0078B8'">@if (brand()?.logoUrl) { <img [src]="brand()!.logoUrl" alt="" /> } @else { {{ initials(brand()?.name ?? 'B') }} }</span>
+          <b>{{ (brand()?.name ?? 'yourbrand').toLowerCase().replace(' ', '') }}</b><span class="spacer"></span><span class="dots">•••</span>
+        </div>
+        <ng-container *ngTemplateOutlet="mediaTpl" />
+        <div class="ig-actions"><app-icon name="heart" /><app-icon name="message" /><app-icon name="send" /><span class="spacer"></span><app-icon name="bookmark" /></div>
+        <div class="ig-text"><b>{{ (brand()?.name ?? 'yourbrand').toLowerCase().replace(' ', '') }}</b> <span [innerHTML]="richText()"></span></div>
+      </div>
+    }
+    <!-- Facebook -->
+    @case ('facebook') {
+      <div class="post fb">
+        <div class="fb-head">
+          <span class="ava" [style.background]="brand()?.primaryColor ?? '#0078B8'">@if (brand()?.logoUrl) { <img [src]="brand()!.logoUrl" alt="" /> } @else { {{ initials(brand()?.name ?? 'B') }} }</span>
+          <div><b>{{ brand()?.name ?? 'Your Page' }}</b><span class="muted small">Just now · 🌐</span></div>
+        </div>
+        <div class="fb-text" [innerHTML]="richText()"></div>
+        <ng-container *ngTemplateOutlet="mediaTpl" />
+        <div class="fb-actions"><span>👍 Like</span><span>💬 Comment</span><span>↗ Share</span></div>
+      </div>
+    }
+    <!-- LinkedIn -->
+    @case ('linkedin') {
+      <div class="post li">
+        <div class="fb-head">
+          <span class="ava sq" [style.background]="brand()?.primaryColor ?? '#0078B8'">@if (brand()?.logoUrl) { <img [src]="brand()!.logoUrl" alt="" /> } @else { {{ initials(brand()?.name ?? 'B') }} }</span>
+          <div><b>{{ brand()?.name ?? 'Your Company' }}</b><span class="muted small">Promoted content · Now · 🌐</span></div>
+        </div>
+        <div class="fb-text clamp" [innerHTML]="richText()"></div>
+        <ng-container *ngTemplateOutlet="mediaTpl" />
+        <div class="fb-actions"><span>👍 Like</span><span>💬 Comment</span><span>🔁 Repost</span><span>➤ Send</span></div>
+      </div>
+    }
+    <!-- YouTube -->
+    @case ('youtube') {
+      <div class="post yt" [class.short]="isVertical()">
+        <ng-container *ngTemplateOutlet="mediaTpl" />
+        <div class="yt-meta">
+          <span class="ava" [style.background]="brand()?.primaryColor ?? '#0078B8'">@if (brand()?.logoUrl) { <img [src]="brand()!.logoUrl" alt="" /> } @else { {{ initials(brand()?.name ?? 'B') }} }</span>
+          <div>
+            <b class="yt-title">{{ title() || 'Video title' }}{{ isVertical() ? ' #Shorts' : '' }}</b>
+            <span class="muted small">{{ brand()?.name ?? 'Your channel' }} · 0 views · just now</span>
+          </div>
+        </div>
+        <div class="yt-desc" [innerHTML]="richText()"></div>
+      </div>
+    }
+  }
+</div>
+
+<div class="foot">
+  <span class="small" [class.over]="text().length > limit()">{{ text().length }} / {{ limit() }}</span>
+  @for (w of warnings(); track w) { <div class="warn"><app-icon name="alert" [size]="14" /> {{ w }}</div> }
+</div>
+
+<ng-template #mediaTpl>
+  <div class="media" [class.vertical]="isVertical()" [class.wide]="active() === 'youtube' && !isVertical()">
+    @if (current(); as m) {
+      @if (m.isVideo) { <video [src]="m.url" muted controls playsinline></video> } @else { <img [src]="m.url" alt="" /> }
+      @if (media().length > 1) {
+        <button class="nav prev" type="button" (click)="slide.set((slide() - 1 + media().length) % media().length)"><app-icon name="chevron-left" [size]="16" /></button>
+        <button class="nav next" type="button" (click)="slide.set((slide() + 1) % media().length)"><app-icon name="chevron-right" [size]="16" /></button>
+        <span class="pager">{{ slide() + 1 }}/{{ media().length }}</span>
+      }
+    } @else {
+      <div class="placeholder"><app-icon [name]="contentType() === 'image' || contentType() === 'carousel' ? 'image' : 'video'" [size]="32" /><span>Add media to preview</span></div>
+    }
+  </div>
+</ng-template>

@@ -1,0 +1,307 @@
+<div class="page editor-page">
+  <div class="page-header">
+    <div>
+      <a routerLink="/posts" class="small"><app-icon name="chevron-left" [size]="14" /> Posts</a>
+      <div class="row mt-8">
+        <h1>{{ post() ? (contentType() === 'reel' ? 'Edit reel' : 'Edit post') : contentType() === 'reel' ? 'Create reel' : 'Create post' }}</h1>
+        @if (post(); as p) { <app-status-badge [status]="p.status" /> }
+        @if (post()?.scheduledAt && post()?.status === 'scheduled') { <span class="muted small">for {{ post()!.scheduledAt | date: 'EEE d MMM, h:mm a' }}</span> }
+      </div>
+    </div>
+    @if (post()) {
+      <div class="row">
+        <button class="btn btn-sm" type="button" (click)="duplicate()"><app-icon name="copy" [size]="15" /> Duplicate</button>
+        <button class="btn btn-sm btn-danger" type="button" (click)="remove()"><app-icon name="trash" [size]="15" /> Delete</button>
+      </div>
+    }
+  </div>
+
+  @if (locked()) {
+    <div class="alert alert-info mb-16"><app-icon name="info" /> <span>This post is {{ post()?.status }}. Content can't be edited, but you can duplicate it or retry failed platforms.</span></div>
+  }
+
+  <div class="editor" [class.readonly]="locked()">
+    <!-- ================= LEFT: controls ================= -->
+    <section class="col controls">
+      <div class="card card-body stack">
+        <div class="field">
+          <label>Brand</label>
+          <select class="select" [ngModel]="brands.currentBrandId()" (ngModelChange)="brands.select($event)" [disabled]="!!post()">
+            @for (b of brands.brands(); track b.id) { <option [value]="b.id">{{ b.name }}</option> }
+          </select>
+        </div>
+        <div class="field">
+          <label>Content type</label>
+          <div class="type-grid">
+            @for (t of [['image','image','Image'],['carousel','layers','Carousel'],['video','video','Video'],['reel','film','Reel']]; track t[0]) {
+              <button type="button" class="type-btn" [class.active]="contentType() === t[0]" (click)="setType($any(t[0]))"><app-icon [name]="t[1]" /> {{ t[2] }}</button>
+            }
+          </div>
+        </div>
+      </div>
+
+      <div class="card card-body stack">
+        <div class="row"><h3 style="flex:1">Media</h3><span class="muted small">{{ media().length }}{{ contentType() === 'carousel' ? '/10' : '/1' }}</span></div>
+        <div class="media-list">
+          @for (m of media(); track m.id; let i = $index) {
+            <div class="media-thumb">
+              @if (m.mimeType.startsWith('video/')) { <video [src]="m.url" muted></video> } @else { <img [src]="m.url" alt="" /> }
+              <div class="thumb-actions">
+                @if (media().length > 1) {
+                  <button type="button" (click)="moveMedia(i, -1)" title="Move left"><app-icon name="chevron-left" [size]="13" /></button>
+                  <button type="button" (click)="moveMedia(i, 1)" title="Move right"><app-icon name="chevron-right" [size]="13" /></button>
+                }
+                <button type="button" (click)="removeMedia(m.id)" title="Remove"><app-icon name="x" [size]="13" /></button>
+              </div>
+            </div>
+          }
+        </div>
+        <div class="grid grid-2">
+          <button class="btn btn-sm" type="button" (click)="picker.set('media')"><app-icon name="upload" [size]="15" /> Upload / Library</button>
+          @if (!isVideo()) {
+            <button class="btn btn-sm btn-gradient" type="button" (click)="aiImage.set(true)"><app-icon name="sparkles" [size]="15" /> AI image</button>
+          } @else {
+            <a class="btn btn-sm btn-gradient" routerLink="/ai" [queryParams]="{ tab: 'video' }"><app-icon name="sparkles" [size]="15" /> AI video</a>
+          }
+        </div>
+        @if (isVideo()) {
+          <div class="field">
+            <label>Thumbnail / cover</label>
+            <div class="row">
+              @if (thumbnail(); as t) { <img class="cover" [src]="t.url" alt="" /> }
+              <button class="btn btn-sm" type="button" (click)="picker.set('thumbnail')">{{ thumbnail() ? 'Change' : 'Choose image' }}</button>
+              @if (thumbnail()) { <button class="btn btn-sm btn-ghost" type="button" (click)="thumbnail.set(null)">Remove</button> }
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="card card-body stack">
+        <div class="row"><h3 style="flex:1">Platforms</h3><span class="muted small">{{ selected().size }} selected</span></div>
+        @for (a of accounts(); track a.id) {
+          <label class="acct" [class.disabled]="a.status !== 'connected' || !supports(a.platform)" [class.on]="selected().has(a.id)">
+            <input type="checkbox" [checked]="selected().has(a.id)" [disabled]="a.status !== 'connected' || !supports(a.platform)" (change)="toggleAccount(a)" />
+            <app-platform-icon [platform]="a.platform" [size]="24" />
+            <span class="acct-name"><b class="truncate">{{ meta[a.platform].name }}</b><span class="truncate muted small">{{ a.accountName }}</span></span>
+            @if (a.status !== 'connected') { <span class="badge badge-danger">{{ a.status }}</span> }
+            @else if (!supports(a.platform)) { <span class="badge">video only</span> }
+          </label>
+        } @empty {
+          <div class="alert alert-warning"><app-icon name="alert" [size]="16" /><span>No social accounts connected. <a routerLink="/social-accounts">Connect accounts</a></span></div>
+        }
+        @for (a of selectedAccounts(); track a.id) {
+          @if (a.platform === 'youtube') {
+            <div class="opt"><app-platform-icon platform="youtube" [size]="16" />
+              <select class="select" [ngModel]="override(a.id).options.privacyStatus ?? 'public'" (ngModelChange)="setOption(a.id, 'privacyStatus', $event)">
+                <option value="public">Public</option><option value="unlisted">Unlisted</option><option value="private">Private</option></select>
+              <label class="checkbox small"><input type="checkbox" [ngModel]="override(a.id).options.madeForKids ?? false" (ngModelChange)="setOption(a.id, 'madeForKids', $event)" /> Made for kids</label>
+            </div>
+          }
+          @if (a.platform === 'instagram' && contentType() === 'reel') {
+            <div class="opt"><app-platform-icon platform="instagram" [size]="16" />
+              <label class="checkbox small"><input type="checkbox" [ngModel]="override(a.id).options.shareToFeed ?? true" (ngModelChange)="setOption(a.id, 'shareToFeed', $event)" /> Also share reel to feed</label></div>
+          }
+          @if (a.platform === 'linkedin') {
+            <div class="opt"><app-platform-icon platform="linkedin" [size]="16" />
+              <select class="select" [ngModel]="override(a.id).options.visibility ?? 'PUBLIC'" (ngModelChange)="setOption(a.id, 'visibility', $event)">
+                <option value="PUBLIC">Anyone</option><option value="CONNECTIONS">Connections only</option></select></div>
+          }
+        }
+      </div>
+    </section>
+
+    <!-- ================= CENTER: editor ================= -->
+    <section class="col center">
+      <div class="card card-body stack">
+        <div class="field"><label>Internal title</label><input class="input" [(ngModel)]="title" placeholder="e.g. Diwali offer - Day 5" /></div>
+
+        <div class="field">
+          <div class="row"><label style="flex:1">Caption</label>
+            <button class="btn btn-sm btn-ghost ai-btn" type="button" (click)="aiPanel.set(aiPanel() === 'caption' ? null : 'caption')"><app-icon name="sparkles" [size]="15" /> AI Generate</button></div>
+          @if (aiPanel() === 'caption') {
+            <div class="ai-panel">
+              <div class="grid grid-2">
+                <input class="input" [(ngModel)]="brief.topic" placeholder="Topic *" />
+                <input class="input" [(ngModel)]="brief.productService" placeholder="Product / service" />
+                <input class="input" [(ngModel)]="brief.targetAudience" placeholder="Target audience" />
+                <input class="input" [(ngModel)]="brief.offer" placeholder="Offer" />
+                <input class="input" [(ngModel)]="brief.tone" [placeholder]="'Tone (' + (brand()?.settings?.defaultTone ?? 'brand default') + ')'" />
+                <input class="input" [(ngModel)]="brief.language" [placeholder]="'Language (' + (brand()?.settings?.defaultLanguage ?? 'en') + ')'" />
+              </div>
+              <input class="input mt-8" [(ngModel)]="brief.objective" placeholder="Objective, e.g. drive demo bookings" />
+              <input class="input mt-8" [(ngModel)]="brief.additionalInstructions" placeholder="Additional instructions" />
+              <button class="btn btn-gradient btn-sm mt-8" type="button" [disabled]="busy() === 'ai-caption'" (click)="generateCaptions()">
+                @if (busy() === 'ai-caption') { <span class="spinner"></span> } Generate 3 captions</button>
+              @for (c of aiCaptions(); track $index) {
+                <div class="ai-option"><p>{{ c.text }}</p><button class="btn btn-sm" type="button" (click)="useCaption(c.text)">Use this</button></div>
+              }
+            </div>
+          }
+          <textarea class="textarea caption" [ngModel]="caption()" (ngModelChange)="caption.set($event)" placeholder="Write something your audience will love…"></textarea>
+          <span class="hint">{{ caption().length }} characters · hashtags, CTA and link are appended per platform.</span>
+        </div>
+
+        <div class="field">
+          <div class="row"><label style="flex:1">Hashtags</label>
+            <button class="btn btn-sm btn-ghost ai-btn" type="button" [disabled]="busy() === 'ai-hashtags'" (click)="generateHashtags()">
+              @if (busy() === 'ai-hashtags') { <span class="spinner"></span> } @else { <app-icon name="sparkles" [size]="15" /> } AI Generate</button></div>
+          <div class="chips-input">
+            @for (t of hashtags(); track t) { <span class="chip">#{{ t }} <button type="button" (click)="removeHashtag(t)">×</button></span> }
+            <input [(ngModel)]="hashtagInput" placeholder="Add hashtag + Enter" (keydown.enter)="$event.preventDefault(); addHashtags(hashtagInput)" (blur)="hashtagInput && addHashtags(hashtagInput)" />
+          </div>
+        </div>
+
+        <div class="grid grid-2">
+          <div class="field"><label>Mentions</label>
+            <div class="chips-input">
+              @for (m of mentions(); track m) { <span class="chip">&#64;{{ m }} <button type="button" (click)="mentions.set(mentions().filter(x => x !== m))">×</button></span> }
+              <input [(ngModel)]="mentionInput" placeholder="@username" (keydown.enter)="$event.preventDefault(); addMention(mentionInput)" />
+            </div></div>
+          <div class="field"><label>Call to action</label><input class="input" [ngModel]="cta()" (ngModelChange)="cta.set($event)" [placeholder]="brand()?.settings?.defaultCta || 'Book a demo today'" /></div>
+        </div>
+        <div class="field"><label>Website URL</label><input class="input" type="url" [ngModel]="linkUrl()" (ngModelChange)="linkUrl.set($event)" [placeholder]="brand()?.website || 'https://'" /></div>
+
+        @if (isVideo()) {
+          <div class="divider"></div>
+          <div class="field"><label>Video title <span class="muted">(YouTube)</span></label><input class="input" maxlength="100" [ngModel]="videoTitle()" (ngModelChange)="videoTitle.set($event)" /></div>
+          <div class="field"><label>Video description <span class="muted">(YouTube - defaults to the caption)</span></label><textarea class="textarea" [(ngModel)]="videoDescription"></textarea></div>
+        }
+      </div>
+
+      @if (contentType() === 'reel') {
+        <div class="card card-body stack">
+          <div class="row"><h3 style="flex:1">Reel script</h3>
+            <input class="input" style="width:110px" type="number" min="5" max="180" [ngModel]="reel().durationSeconds ?? 30" (ngModelChange)="patchReel({ durationSeconds: +$event })" title="Duration (s)" />
+            <button class="btn btn-sm btn-gradient" type="button" [disabled]="busy() === 'ai-reel'" (click)="generateReelScript()">
+              @if (busy() === 'ai-reel') { <span class="spinner"></span> } @else { <app-icon name="sparkles" [size]="15" /> } AI script</button></div>
+          <div class="grid grid-2">
+            <div class="field"><label>Hook (0-3s)</label><textarea class="textarea sm" [ngModel]="reel().script?.hook" (ngModelChange)="updateScript('hook', $event)"></textarea></div>
+            <div class="field"><label>Main content</label><textarea class="textarea sm" [ngModel]="reel().script?.mainContent" (ngModelChange)="updateScript('mainContent', $event)"></textarea></div>
+            <div class="field"><label>Call to action</label><textarea class="textarea sm" [ngModel]="reel().script?.cta" (ngModelChange)="updateScript('cta', $event)"></textarea></div>
+            <div class="field"><label>Ending</label><textarea class="textarea sm" [ngModel]="reel().script?.ending" (ngModelChange)="updateScript('ending', $event)"></textarea></div>
+          </div>
+          <div class="field"><div class="row"><label style="flex:1">Text overlays</label><button class="btn btn-sm" type="button" (click)="addOverlay()"><app-icon name="plus" [size]="14" /> Add</button></div>
+            @for (o of reel().textOverlays ?? []; track $index; let i = $index) {
+              <div class="overlay-row">
+                <input class="input" [ngModel]="o.text" (ngModelChange)="updateOverlay(i, { text: $event })" placeholder="On-screen text" />
+                <input class="input num" type="number" min="0" [ngModel]="o.startSeconds" (ngModelChange)="updateOverlay(i, { startSeconds: +$event })" title="Start (s)" />
+                <input class="input num" type="number" min="0" [ngModel]="o.endSeconds" (ngModelChange)="updateOverlay(i, { endSeconds: +$event })" title="End (s)" />
+                <button class="btn btn-ghost btn-icon btn-sm" type="button" (click)="removeOverlay(i)"><app-icon name="x" [size]="14" /></button>
+              </div>
+            }
+          </div>
+          <div class="grid grid-2">
+            <label class="checkbox"><input type="checkbox" [ngModel]="reel().voiceOverEnabled" (ngModelChange)="patchReel({ voiceOverEnabled: $event })" /> Voice-over</label>
+            <label class="checkbox"><input type="checkbox" [ngModel]="reel().subtitlesEnabled" (ngModelChange)="patchReel({ subtitlesEnabled: $event })" /> Subtitles</label>
+          </div>
+          @if (reel().voiceOverEnabled) {
+            <textarea class="textarea sm" [ngModel]="reel().voiceOverText" (ngModelChange)="patchReel({ voiceOverText: $event })" placeholder="Voice-over narration"></textarea>
+          }
+          <input class="input" [ngModel]="reel().musicPreference" (ngModelChange)="patchReel({ musicPreference: $event })" placeholder="Music preference (e.g. upbeat festive)" />
+          <p class="hint">Reels are published from the uploaded/AI-generated video. Script, overlays and voice-over guide AI video generation and your editing.</p>
+        </div>
+      }
+
+      <div class="card">
+        <div class="card-header wrap"><h3>Platform-specific content</h3>
+          <button class="btn btn-sm btn-ghost ai-btn" type="button" [disabled]="busy() === 'ai-platform'" (click)="optimisePerPlatform()">
+            @if (busy() === 'ai-platform') { <span class="spinner"></span> } @else { <app-icon name="sparkles" [size]="15" /> } Optimise per platform</button>
+          <button class="btn btn-sm btn-ghost" type="button" (click)="showOverrides.set(!showOverrides())">{{ showOverrides() ? 'Hide' : 'Customise' }}</button>
+        </div>
+        @if (showOverrides()) {
+          <div class="card-body stack">
+            @for (a of selectedAccounts(); track a.id) {
+              <div class="override">
+                <div class="row"><app-platform-icon [platform]="a.platform" [size]="20" /><b>{{ meta[a.platform].name }}</b><span class="muted small truncate">{{ a.accountName }}</span></div>
+                @if (a.platform === 'youtube') {
+                  <input class="input" maxlength="100" [ngModel]="override(a.id).titleOverride" (ngModelChange)="setOverride(a.id, { titleOverride: $event })" placeholder="YouTube title (optional override)" />
+                }
+                <textarea class="textarea sm" [ngModel]="override(a.id).captionOverride" (ngModelChange)="setOverride(a.id, { captionOverride: $event })" [placeholder]="'Leave empty to use the main caption'"></textarea>
+                @if (override(a.id).hashtagsOverride; as tags) {
+                  <div class="row-wrap">@for (t of tags; track t) { <span class="chip">#{{ t }}</span> }
+                    <button class="btn btn-ghost btn-sm" type="button" (click)="setOverride(a.id, { hashtagsOverride: null })">Use main hashtags</button></div>
+                }
+              </div>
+            } @empty { <p class="muted">Select platforms to customise their captions.</p> }
+          </div>
+        }
+      </div>
+    </section>
+
+    <!-- ================= RIGHT: preview ================= -->
+    <section class="col preview-col">
+      <div class="card sticky">
+        <div class="card-header"><h3>Preview</h3><span class="muted small">Approximate</span></div>
+        <app-platform-preview [brand]="brand()" [platforms]="selectedPlatforms()" [texts]="previewTexts()" [media]="previewMedia()"
+          [contentType]="contentType()" [cta]="cta()" [linkUrl]="linkUrl()" [mentions]="mentions()" />
+      </div>
+
+      @if (status().length) {
+        <div class="card mt-16">
+          <div class="card-header"><h3>Publishing status</h3>
+            @if (publishing()) { <span class="spinner" style="color:var(--primary)"></span> }
+            @if (failedCount() > 0 && !publishing()) { <button class="btn btn-sm" type="button" (click)="retryFailed()"><app-icon name="refresh" [size]="14" /> Retry failed</button> }
+          </div>
+          <div class="status-list">
+            @for (s of status(); track s.postPlatformId) {
+              <div class="status-row">
+                <app-platform-icon [platform]="s.platform" [size]="26" />
+                <div class="status-text">
+                  <b>{{ meta[s.platform].name }}</b><span class="muted small truncate">{{ s.accountName }}</span>
+                  @if (s.status === 'failed' && s.errorMessage) { <span class="error-text">{{ s.errorMessage }}</span> }
+                </div>
+                <span class="state" [class]="s.status">
+                  @switch (s.status) {
+                    @case ('published') { ✅ Published }
+                    @case ('failed') { ❌ Failed }
+                    @case ('publishing') { ⏳ Publishing }
+                    @case ('queued') { ⏳ Queued }
+                    @default { • {{ s.status }} }
+                  }
+                </span>
+                @if (s.platformPostUrl) { <a class="btn btn-ghost btn-icon btn-sm" [href]="s.platformPostUrl" target="_blank" rel="noopener" title="View post"><app-icon name="external" [size]="14" /></a> }
+                @if (s.status === 'failed') {
+                  <button class="btn btn-ghost btn-icon btn-sm" type="button" title="View error" (click)="showJob(s)"><app-icon name="eye" [size]="14" /></button>
+                  <button class="btn btn-sm" type="button" (click)="retryJob(s)">Retry</button>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </section>
+  </div>
+
+  <!-- ================= ACTION BAR ================= -->
+  <div class="action-bar">
+    @if (post()?.status === 'scheduled') {
+      <button class="btn btn-ghost" type="button" (click)="unschedule()"><app-icon name="x" [size]="15" /> Cancel schedule</button>
+    }
+    <span class="spacer"></span>
+    <button class="btn" type="button" [disabled]="!!busy() || locked()" (click)="saveDraft()">@if (busy() === 'save') { <span class="spinner"></span> } Save draft</button>
+    <div class="schedule-group">
+      <input class="input" type="datetime-local" [(ngModel)]="scheduleAt" [disabled]="locked()" />
+      <button class="btn" type="button" [disabled]="!!busy() || locked()" (click)="schedule()">@if (busy() === 'schedule') { <span class="spinner"></span> } @else { <app-icon name="clock" [size]="15" /> } Schedule</button>
+    </div>
+    <button class="btn btn-primary" type="button" [disabled]="!!busy() || publishing()" (click)="publishNow()">@if (busy() === 'publish') { <span class="spinner"></span> } @else { <app-icon name="send" [size]="15" /> } Publish now</button>
+    <button class="btn btn-gradient" type="button" [disabled]="!!busy() || publishing()" (click)="publishToAll()">@if (busy() === 'publish-all') { <span class="spinner"></span> } @else { <app-icon name="zap" [size]="15" /> } Publish to all</button>
+  </div>
+</div>
+
+@if (picker() && brands.currentBrandId()) {
+  <app-media-picker [brandId]="brands.currentBrandId()!" [multiple]="picker() === 'media' && contentType() === 'carousel'"
+    [accept]="picker() === 'thumbnail' ? 'image' : isVideo() ? 'video' : 'image'" (picked)="onPicked($event)" (closed)="picker.set(null)" />
+}
+@if (aiImage() && brands.currentBrandId()) {
+  <app-ai-image-dialog [brandId]="brands.currentBrandId()!" [topic]="brief.topic || title" (used)="onAiImage($event)" (closed)="aiImage.set(false)" />
+}
+@if (jobDetail(); as j) {
+  <app-modal [title]="meta[j.platform].name + ' publishing log'" (closed)="jobDetail.set(null)">
+    @if (j.errorMessage) { <div class="alert alert-danger mb-16"><app-icon name="alert" [size]="16" /><span><b>{{ j.errorCode }}</b><br />{{ j.errorMessage }}</span></div> }
+    <div class="log">
+      @for (l of j.logs ?? []; track l.id) {
+        <div class="log-row" [class]="l.level"><span class="muted small">{{ l.createdAt | date: 'HH:mm:ss' }}</span><span class="badge">{{ l.event }}</span><span>{{ l.message }}</span></div>
+      }
+    </div>
+  </app-modal>
+}

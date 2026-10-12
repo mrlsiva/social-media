@@ -1,0 +1,13 @@
+:host {
+  background: radial-gradient(120% 90% at 0% 0%, #1a8fce 0%, var(--primary) 45%, #005b8c 100%);
+  color: #fff; padding: 48px; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden;
+}
+:host::after { content: ''; position: absolute; width: 420px; height: 420px; right: -120px; bottom: -120px; border-radius: 50%; background: radial-gradient(circle, rgba(245,122,168,.55), transparent 65%); }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; }
+.mark { width: 36px; height: 36px; border-radius: 10px; background: rgba(255,255,255,.18); display: grid; place-items: center; }
+h1 { font-size: 36px; line-height: 1.15; max-width: 460px; letter-spacing: -0.02em; }
+p { opacity: .85; margin-top: 14px; max-width: 440px; font-size: 15px; }
+.features { display: grid; gap: 12px; margin-top: 28px; position: relative; z-index: 1; }
+.feature { display: flex; gap: 10px; align-items: center; font-size: 14px; }
+.feature span { width: 28px; height: 28px; border-radius: 8px; background: rgba(255,255,255,.16); display: grid; place-items: center; }
+.platforms { display: flex; gap: 8px; position: relative; z-index: 1; }

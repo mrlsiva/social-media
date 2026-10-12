@@ -1,0 +1,118 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <a routerLink="/brands" class="small"><app-icon name="chevron-left" [size]="14" /> Brands</a>
+      <h1 class="mt-8">{{ id() ? 'Edit brand' : 'Add brand' }}</h1>
+      <p>{{ welcome ? 'Welcome! Start by adding your first brand.' : 'Brand details are used in AI generation and image branding.' }}</p>
+    </div>
+  </div>
+
+  <form class="layout" [formGroup]="form" (ngSubmit)="save()">
+    <div class="stack">
+      <div class="card">
+        <div class="card-header"><h2>Brand identity</h2></div>
+        <div class="card-body stack">
+          <div class="logo-drop">
+            <span class="brand-logo logo-preview" [style.background]="form.controls.primaryColor.value">
+              @if (logoUrl()) { <img [src]="logoUrl()" alt="Logo" /> } @else { {{ initials(form.controls.name.value || 'B') }} }
+            </span>
+            <div class="stack" style="gap:6px">
+              <label class="btn btn-sm"><app-icon name="upload" [size]="15" /> Upload logo
+                <input type="file" hidden accept=".png,.jpg,.jpeg,.webp" (change)="onLogo($event)" /></label>
+              <span class="hint">PNG with transparent background works best. Max 10 MB.</span>
+            </div>
+          </div>
+          <div class="field"><label>Brand name *</label><input class="input" formControlName="name" placeholder="Sling Groups" /></div>
+          <div class="field"><label>Description</label><textarea class="textarea" formControlName="description" placeholder="What does this business do? Who are its customers?"></textarea></div>
+          <div class="grid grid-2">
+            <div class="field"><label>Primary colour</label><div class="row"><input type="color" class="input" formControlName="primaryColor" /><input class="input" formControlName="primaryColor" /></div></div>
+            <div class="field"><label>Secondary colour</label><div class="row"><input type="color" class="input" formControlName="secondaryColor" /><input class="input" formControlName="secondaryColor" /></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h2>Contact</h2></div>
+        <div class="card-body grid grid-2">
+          <div class="field"><label>Website</label><input class="input" formControlName="website" placeholder="https://" />
+            @if (form.controls.website.invalid && form.controls.website.touched) { <span class="error-text">Include http:// or https://</span> }</div>
+          <div class="field"><label>Phone</label><input class="input" formControlName="phone" /></div>
+          <div class="field"><label>Email</label><input class="input" formControlName="email" /></div>
+          <div class="field"><label>Address</label><input class="input" formControlName="address" /></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h2>Content defaults & AI voice</h2></div>
+        <div class="card-body stack">
+          <div class="grid grid-3">
+            <div class="field"><label>Default language</label>
+              <select class="select" formControlName="defaultLanguage">@for (l of languages; track l[0]) { <option [value]="l[0]">{{ l[1] }}</option> }</select></div>
+            <div class="field"><label>Default tone</label>
+              <select class="select" formControlName="defaultTone">@for (t of tones; track t) { <option [value]="t">{{ t }}</option> }</select></div>
+            <div class="field"><label>Timezone</label><input class="input" formControlName="timezone" /></div>
+          </div>
+          <div class="field"><label>Default call to action</label><input class="input" formControlName="defaultCta" placeholder="Book a free demo today" /></div>
+          <div class="field"><label>Brand voice</label><textarea class="textarea" formControlName="brandVoice" placeholder="Friendly experts who explain things simply. Optimistic, never pushy."></textarea></div>
+          <div class="grid grid-2">
+            <div class="field"><label>Keywords</label><input class="input" formControlName="keywords" placeholder="GST billing, retail, inventory" /><span class="hint">Comma separated</span></div>
+            <div class="field"><label>Avoid words</label><input class="input" formControlName="avoidWords" placeholder="cheap, guaranteed" /></div>
+          </div>
+          <div class="grid grid-2">
+            <div class="field"><label>Default hashtags</label><input class="input" formControlName="defaultHashtags" placeholder="slinggroups, smallbusiness" /></div>
+            <div class="field"><label>Emoji usage</label>
+              <select class="select" formControlName="emojiLevel"><option value="none">None</option><option value="light">Light</option><option value="heavy">Heavy</option></select></div>
+          </div>
+          <label class="checkbox"><input type="checkbox" formControlName="useBrandingInImages" /> Use logo, colours and name in AI images by default</label>
+        </div>
+      </div>
+
+      @if (id()) {
+        <div class="card">
+          <div class="card-header"><h2>Team</h2><span class="muted small">Members can work on this brand only</span></div>
+          <div class="card-body">
+            @for (m of members(); track m.id) {
+              <div class="member">
+                <span class="avatar">{{ initials(m.firstName + ' ' + (m.lastName ?? '')) }}</span>
+                <div style="flex:1"><b>{{ m.firstName }} {{ m.lastName }}</b><div class="muted small">{{ m.email }}</div></div>
+                <span class="badge">{{ m.role }}</span>
+                @if (m.role !== 'owner' && (role() === 'owner' || role() === 'admin')) {
+                  <button class="btn btn-ghost btn-icon btn-sm" type="button" (click)="removeMember(m)"><app-icon name="x" [size]="15" /></button>
+                }
+              </div>
+            }
+            @if (role() === 'owner' || role() === 'admin') {
+              <div class="row mt-16">
+                <input class="input" placeholder="colleague@company.com" [(ngModel)]="inviteEmail" [ngModelOptions]="{ standalone: true }" />
+                <select class="select" style="width:130px" [(ngModel)]="inviteRole" [ngModelOptions]="{ standalone: true }">
+                  <option value="admin">Admin</option><option value="editor">Editor</option><option value="viewer">Viewer</option>
+                </select>
+                <button class="btn" type="button" (click)="invite()">Add</button>
+              </div>
+              <span class="hint">The person must already have an account.</span>
+            }
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="card preview-card">
+      <div class="preview-cover" [style.background]="'linear-gradient(135deg,' + form.controls.primaryColor.value + ',' + form.controls.secondaryColor.value + ')'"></div>
+      <div class="preview-body">
+        <span class="brand-logo preview-logo" [style.background]="form.controls.primaryColor.value">
+          @if (logoUrl()) { <img [src]="logoUrl()" alt="" /> } @else { {{ initials(form.controls.name.value || 'B') }} }
+        </span>
+        <h2 class="mt-8">{{ form.controls.name.value || 'Your brand' }}</h2>
+        <p class="text-2 mt-8">{{ form.controls.description.value || 'Brand description appears here.' }}</p>
+        <div class="swatches">
+          <span class="swatch" [style.background]="form.controls.primaryColor.value">Primary</span>
+          <span class="swatch" [style.background]="form.controls.secondaryColor.value">Secondary</span>
+        </div>
+        <div class="divider"></div>
+        <button class="btn btn-primary btn-block" type="submit" [disabled]="saving()">
+          @if (saving()) { <span class="spinner"></span> } {{ id() ? 'Save changes' : 'Create brand' }}
+        </button>
+      </div>
+    </div>
+  </form>
+</div>

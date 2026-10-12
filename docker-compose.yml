@@ -1,0 +1,83 @@
+# Local infrastructure + optional full stack.
+#
+#   docker compose up -d                      -> MySQL 8 + Redis 7 + phpMyAdmin (use with `npm run start:dev`)
+#   docker compose --profile app up -d --build -> also builds and runs the API (port 3000) and web (port 8080)
+#
+# Already using XAMPP/WAMP MySQL + phpMyAdmin? Start only Redis:  docker compose up -d redis
+
+name: socialpilot
+
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DATABASE_NAME:-social_media_platform}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_USER: ${DATABASE_USER_APP:-socialpilot}
+      MYSQL_PASSWORD: ${DATABASE_PASSWORD_APP:-socialpilot}
+    command: ['--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci']
+    ports: ['3306:3306']
+    volumes: ['mysql-data:/var/lib/mysql']
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', '127.0.0.1', '-uroot', '-p${MYSQL_ROOT_PASSWORD:-rootpassword}']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes', '--maxmemory-policy', 'noeviction']
+    ports: ['6379:6379']
+    volumes: ['redis-data:/data']
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  phpmyadmin:
+    image: phpmyadmin:5
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      UPLOAD_LIMIT: 64M
+    ports: ['8081:80']
+    depends_on: [mysql]
+
+  backend:
+    profiles: ['app']
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    restart: unless-stopped
+    env_file: ./backend/.env
+    environment:
+      DATABASE_TYPE: mysql
+      DATABASE_HOST: mysql
+      DATABASE_USER: ${DATABASE_USER_APP:-socialpilot}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD_APP:-socialpilot}
+      REDIS_HOST: redis
+      STORAGE_LOCAL_PATH: /app/uploads
+      RUN_SEED: 'true'
+    ports: ['3000:3000']
+    volumes: ['uploads:/app/uploads']
+    depends_on:
+      mysql: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  web:
+    profiles: ['app']
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+    restart: unless-stopped
+    ports: ['8080:80']
+    depends_on: [backend]
+
+volumes:
+  mysql-data:
+  redis-data:
+  uploads:

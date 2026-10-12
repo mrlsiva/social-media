@@ -1,0 +1,132 @@
+<div class="shell" [class.open]="sidebarOpen()">
+  <aside class="sidebar">
+    <a routerLink="/dashboard" class="logo">
+      <span class="logo-mark"><app-icon name="send" [size]="18" /></span>
+      <span>SocialPilot<b> AI</b></span>
+    </a>
+    <nav>
+      @for (group of nav; track group.section) {
+        <div class="nav-section">{{ group.section }}</div>
+        @for (item of group.items; track item.label) {
+          @if (item.query || item.link === '/posts') {
+            <a [routerLink]="item.link" [queryParams]="item.query ?? {}" class="nav-item" [class.active]="isQueryActive(item)">
+              <app-icon [name]="item.icon" /> {{ item.label }}
+            </a>
+          } @else {
+            <a [routerLink]="item.link" routerLinkActive="active" class="nav-item"><app-icon [name]="item.icon" /> {{ item.label }}</a>
+          }
+        }
+      }
+      @if (auth.isAdmin()) {
+        <div class="nav-section">Admin</div>
+        <a routerLink="/admin/subscriptions" routerLinkActive="active" class="nav-item"><app-icon name="users" /> Subscriptions</a>
+        <a routerLink="/admin/ai-settings" routerLinkActive="active" class="nav-item"><app-icon name="shield" /> AI providers</a>
+      }
+    </nav>
+    <div class="sidebar-foot">
+      <a routerLink="/subscription" class="upgrade">
+        <app-icon name="zap" />
+        <div><b>Upgrade plan</b><span>More brands & AI credits</span></div>
+      </a>
+    </div>
+  </aside>
+  <div class="backdrop" (click)="sidebarOpen.set(false)"></div>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="btn btn-ghost btn-icon mobile-only" type="button" (click)="sidebarOpen.set(true)" aria-label="Menu"><app-icon name="menu" /></button>
+
+      <!-- Brand selector -->
+      <div class="dropdown">
+        <button class="brand-switch" type="button" (click)="toggle('brand', $event)">
+          @if (brands.currentBrand(); as b) {
+            <span class="brand-logo sm" [style.background]="b.primaryColor">
+              @if (b.logoUrl) { <img [src]="b.logoUrl" alt="" /> } @else { {{ initials(b.name) }} }
+            </span>
+            <span class="truncate">{{ b.name }}</span>
+          } @else {
+            <span class="muted">No brand yet</span>
+          }
+          <app-icon name="chevron-down" [size]="16" />
+        </button>
+        @if (menu() === 'brand') {
+          <div class="menu" (click)="$event.stopPropagation()">
+            <div class="menu-title">Switch brand</div>
+            @for (b of brands.brands(); track b.id) {
+              <button class="menu-item" type="button" (click)="selectBrand(b.id)">
+                <span class="brand-logo xs" [style.background]="b.primaryColor">
+                  @if (b.logoUrl) { <img [src]="b.logoUrl" alt="" /> } @else { {{ initials(b.name) }} }
+                </span>
+                <span class="truncate">{{ b.name }}</span>
+                @if (b.id === brands.currentBrandId()) { <app-icon name="check" [size]="16" class="ok" /> }
+              </button>
+            }
+            <div class="menu-sep"></div>
+            <a class="menu-item" routerLink="/brands/new"><app-icon name="plus" [size]="16" /> Add brand</a>
+            <a class="menu-item" routerLink="/brands"><app-icon name="brands" [size]="16" /> Manage brands</a>
+          </div>
+        }
+      </div>
+
+      <span class="spacer"></span>
+
+      <!-- Quick create -->
+      <div class="dropdown">
+        <button class="btn btn-gradient" type="button" (click)="toggle('create', $event)"><app-icon name="plus" /> <span class="hide-sm">Create</span></button>
+        @if (menu() === 'create') {
+          <div class="menu right" (click)="$event.stopPropagation()">
+            <a class="menu-item" routerLink="/posts/new"><app-icon name="edit" [size]="16" /> Create Post</a>
+            <a class="menu-item" routerLink="/reels/new"><app-icon name="film" [size]="16" /> Create Reel</a>
+            <a class="menu-item" routerLink="/ai"><app-icon name="sparkles" [size]="16" /> AI Generate</a>
+            <a class="menu-item" routerLink="/campaigns"><app-icon name="megaphone" [size]="16" /> New Campaign</a>
+            <a class="menu-item" routerLink="/brands/new"><app-icon name="brands" [size]="16" /> Add Brand</a>
+          </div>
+        }
+      </div>
+
+      <!-- Notifications -->
+      <div class="dropdown">
+        <button class="btn btn-ghost btn-icon bell" type="button" (click)="toggle('notifications', $event)" aria-label="Notifications">
+          <app-icon name="bell" />
+          @if (notifications.unread() > 0) { <span class="count">{{ notifications.unread() > 9 ? '9+' : notifications.unread() }}</span> }
+        </button>
+        @if (menu() === 'notifications') {
+          <div class="menu right wide" (click)="$event.stopPropagation()">
+            <div class="row menu-title"><span>Notifications</span><span class="spacer"></span>
+              <button class="btn btn-ghost btn-sm" type="button" (click)="notifications.markAllRead()">Mark all read</button></div>
+            @for (n of notifications.items(); track n.id) {
+              <button class="notif" type="button" [class.unread]="!n.readAt" (click)="openNotification(n)">
+                <span class="notif-icon" [class]="n.type"><app-icon [name]="n.type.includes('failed') || n.type === 'token_expired' ? 'alert' : n.type.includes('generation') ? 'sparkles' : n.type === 'scheduled_reminder' ? 'clock' : 'check'" [size]="16" /></span>
+                <span class="notif-text"><b>{{ n.title }}</b>@if (n.body) {<span>{{ n.body }}</span>}<small>{{ n.createdAt | ago }}</small></span>
+              </button>
+            } @empty {
+              <div class="empty small">You're all caught up.</div>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- User -->
+      <div class="dropdown">
+        <button class="user-btn" type="button" (click)="toggle('user', $event)">
+          <span class="avatar">{{ userInitials() }}</span>
+        </button>
+        @if (menu() === 'user') {
+          <div class="menu right" (click)="$event.stopPropagation()">
+            <div class="menu-title">{{ auth.user()?.firstName }} {{ auth.user()?.lastName }}<br /><span class="muted small">{{ auth.user()?.email }}</span></div>
+            <a class="menu-item" routerLink="/settings"><app-icon name="settings" [size]="16" /> Settings</a>
+            <a class="menu-item" routerLink="/subscription"><app-icon name="card" [size]="16" /> Subscription</a>
+            @if (auth.isAdmin()) {
+              <a class="menu-item" routerLink="/admin/subscriptions"><app-icon name="users" [size]="16" /> Manage subscriptions</a>
+              <a class="menu-item" routerLink="/admin/ai-settings"><app-icon name="shield" [size]="16" /> AI providers</a>
+            }
+            <div class="menu-sep"></div>
+            <button class="menu-item" type="button" (click)="auth.logout()"><app-icon name="logout" [size]="16" /> Log out</button>
+          </div>
+        }
+      </div>
+    </header>
+
+    <main class="content"><router-outlet /></main>
+  </div>
+</div>

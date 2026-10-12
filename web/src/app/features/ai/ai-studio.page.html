@@ -1,0 +1,193 @@
+<div class="page">
+  <div class="page-header">
+    <div><h1>AI Studio</h1><p>On-brand content for <b>{{ brands.currentBrand()?.name }}</b>, written in its voice, language and tone.</p></div>
+  </div>
+
+  <div class="card">
+    <div class="tabs" style="padding:0 12px">
+      @for (t of tabs; track t.id) {
+        <button type="button" [class.active]="active() === t.id" (click)="select(t.id)"><app-icon [name]="t.icon" [size]="16" /> {{ t.label }}</button>
+      }
+    </div>
+
+    @if (active() === 'history') {
+      <div class="card-body">
+        <div class="table-wrap">
+          <table class="table">
+            <thead><tr><th>Type</th><th>Topic</th><th>Status</th><th>When</th><th>Output</th></tr></thead>
+            <tbody>
+              @for (h of history(); track h.id) {
+                <tr>
+                  <td><span class="badge badge-pink">{{ h.type.replace('_', ' ') }}</span></td>
+                  <td class="truncate" style="max-width:240px">{{ h.input['topic'] ?? '-' }}</td>
+                  <td><app-status-badge [status]="h.status" /></td>
+                  <td class="small">{{ h.createdAt | date: 'd MMM, h:mm a' }}</td>
+                  <td class="small">@if (h.errorMessage) { <span class="error-text">{{ h.errorMessage }}</span> } @else { <details><summary>View</summary><pre>{{ h.output | json }}</pre></details> }</td>
+                </tr>
+              } @empty { <tr><td colspan="5"><div class="empty small">No AI generations yet.</div></td></tr> }
+            </tbody>
+          </table>
+        </div>
+        @if (historyMeta(); as m) { @if (m.totalPages > 1) {
+          <div class="row mt-16" style="justify-content:flex-end">
+            <button class="btn btn-sm" type="button" [disabled]="m.page <= 1" (click)="loadHistory(m.page - 1)">Previous</button>
+            <button class="btn btn-sm" type="button" [disabled]="m.page >= m.totalPages" (click)="loadHistory(m.page + 1)">Next</button>
+          </div> } }
+      </div>
+    } @else {
+      <div class="studio">
+        <!-- Brief -->
+        <div class="brief stack">
+          <div class="field"><label>Topic *</label><input class="input" [(ngModel)]="brief.topic" placeholder="e.g. Diwali offer on billing software" /></div>
+          <div class="field"><label>Product / service</label><input class="input" [(ngModel)]="brief.productService" /></div>
+          @if (active() !== 'image') {
+            <div class="field"><label>Target audience</label><input class="input" [(ngModel)]="brief.targetAudience" placeholder="Retail shop owners" /></div>
+          }
+          <div class="grid grid-2">
+            <div class="field"><label>Language</label><input class="input" [(ngModel)]="brief.language" [placeholder]="brands.currentBrand()?.settings?.defaultLanguage ?? 'en'" /></div>
+            <div class="field"><label>Tone</label><input class="input" [(ngModel)]="brief.tone" [placeholder]="brands.currentBrand()?.settings?.defaultTone ?? 'professional'" /></div>
+          </div>
+          @if (active() !== 'video' && active() !== 'image') {
+            <div class="field"><label>Objective</label><input class="input" [(ngModel)]="brief.objective" placeholder="Drive demo bookings" /></div>
+            <div class="field"><label>Offer</label><input class="input" [(ngModel)]="brief.offer" placeholder="30% off annual plans" /></div>
+            <div class="field"><label>Additional instructions</label><textarea class="textarea" [(ngModel)]="brief.additionalInstructions"></textarea></div>
+          }
+
+          @switch (active()) {
+            @case ('caption') {
+              <div class="field"><label>Optimise for</label><select class="select" [(ngModel)]="opts.platform"><option value="">Any platform</option><option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="linkedin">LinkedIn</option><option value="youtube">YouTube</option></select></div>
+            }
+            @case ('hashtags') {
+              <div class="field"><label>Platform</label><select class="select" [(ngModel)]="opts.platform"><option value="">Any platform</option><option value="instagram">Instagram</option><option value="linkedin">LinkedIn</option><option value="youtube">YouTube</option></select></div>
+            }
+            @case ('ideas') { <div class="field"><label>How many</label><input class="input" type="number" min="1" max="10" [(ngModel)]="opts.count" /></div> }
+            @case ('reels') { <div class="field"><label>How many</label><input class="input" type="number" min="1" max="10" [(ngModel)]="opts.count" /></div> }
+            @case ('script') { <div class="field"><label>Duration (seconds)</label><input class="input" type="number" min="5" max="180" [(ngModel)]="opts.durationSeconds" /></div> }
+            @case ('platform') {
+              <div class="field"><label>Platforms</label><div class="row-wrap">
+                @for (p of ['instagram', 'facebook', 'linkedin', 'youtube']; track p) {
+                  <label class="checkbox"><input type="checkbox" [checked]="opts.platforms.includes($any(p))" (change)="togglePlatform($any(p))" /> {{ meta[p].name }}</label>
+                }</div></div>
+            }
+            @case ('video') {
+              <div class="grid grid-2">
+                <div class="field"><label>Duration</label><select class="select" [(ngModel)]="videoForm.durationSeconds"><option [ngValue]="4">4 s</option><option [ngValue]="8">8 s</option><option [ngValue]="12">12 s</option></select></div>
+                <div class="field"><label>Format</label><select class="select" [(ngModel)]="videoForm.aspect"><option value="portrait">Vertical 9:16 (Reels/Shorts)</option><option value="landscape">Horizontal 16:9</option></select></div>
+              </div>
+              <div class="field"><label>Style</label><input class="input" [(ngModel)]="videoForm.style" placeholder="cinematic, warm festive lighting" /></div>
+              <div class="grid grid-2">
+                <div class="field"><label>Voice</label><input class="input" [(ngModel)]="videoForm.voice" placeholder="confident female narrator" /></div>
+                <div class="field"><label>Music</label><input class="input" [(ngModel)]="videoForm.musicPreference" placeholder="upbeat, festive" /></div>
+              </div>
+              <div class="field"><label>Call to action</label><input class="input" [(ngModel)]="videoForm.cta" /></div>
+              <label class="checkbox"><input type="checkbox" [(ngModel)]="videoForm.subtitles" /> Generate subtitles (SRT)</label>
+            }
+          }
+
+          @if (active() === 'image') {
+            <button class="btn btn-gradient btn-lg" type="button" (click)="showImage.set(true)"><app-icon name="sparkles" /> Open image generator</button>
+          } @else if (active() === 'video') {
+            <button class="btn btn-gradient btn-lg" type="button" [disabled]="busy()" (click)="generateVideo()">
+              @if (busy()) { <span class="spinner"></span> Generating… } @else { <app-icon name="sparkles" /> Generate video } </button>
+            <p class="hint">Video generation runs in the background and can take a few minutes. You'll get a notification when it's ready.</p>
+          } @else {
+            <button class="btn btn-gradient btn-lg" type="button" [disabled]="busy() || !brief.topic" (click)="generate()">
+              @if (busy()) { <span class="spinner"></span> Generating… } @else { <app-icon name="sparkles" /> Generate } </button>
+          }
+        </div>
+
+        <!-- Results -->
+        <div class="results">
+          @if (busy() && active() !== 'video') {
+            <div class="stack">@for (i of [1,2,3]; track i) { <div class="skeleton" style="height:96px"></div> }</div>
+          } @else if (active() === 'video') {
+            @if (video(); as v) {
+              @if (v.status === 'completed') {
+                <div class="video-result">
+                  <video [src]="v.videoUrl" controls playsinline></video>
+                  <div class="row-wrap mt-16">
+                    <button class="btn btn-primary" type="button" (click)="useVideo()"><app-icon name="film" [size]="15" /> Use in reel</button>
+                    <a class="btn" [href]="v.videoUrl" download target="_blank" rel="noopener"><app-icon name="download" [size]="15" /> Download</a>
+                  </div>
+                  @if (v.subtitlesSrt) { <details class="mt-16"><summary>Subtitles (SRT)</summary><pre>{{ v.subtitlesSrt }}</pre></details> }
+                </div>
+              } @else if (v.status === 'failed') {
+                <div class="alert alert-danger"><app-icon name="alert" /> {{ v.error }}</div>
+              } @else {
+                <div class="progress-box">
+                  <span class="spinner lg"></span>
+                  <b>Rendering your video… {{ v.progress ?? 0 }}%</b>
+                  <div class="bar"><span [style.width.%]="v.progress ?? 5"></span></div>
+                  @if (v.storyboard) { <details><summary>Storyboard</summary><pre>{{ v.storyboard | json }}</pre></details> }
+                </div>
+              }
+            } @else {
+              <div class="placeholder"><app-icon name="video" [size]="36" /><p>AI creates scenes, text overlays, voice-over, subtitles and music cues, then renders the video.</p></div>
+            }
+          } @else if (result(); as r) {
+            @switch (active()) {
+              @case ('caption') {
+                @for (c of r.captions; track $index) {
+                  <div class="result-card"><p class="pre">{{ c.text }}</p>
+                    <div class="row"><button class="btn btn-sm" type="button" (click)="copy(c.text)"><app-icon name="copy" [size]="14" /> Copy</button>
+                      <button class="btn btn-sm btn-primary" type="button" (click)="useCaption(c.text)">Use in post</button></div></div>
+                }
+              }
+              @case ('hashtags') {
+                <div class="result-card">
+                  <div class="row-wrap">@for (h of r.hashtags; track h) { <span class="chip">#{{ h }}</span> }</div>
+                  <button class="btn btn-sm mt-16" type="button" (click)="copy(asText(r.hashtags))"><app-icon name="copy" [size]="14" /> Copy all</button>
+                </div>
+              }
+              @case ('ideas') {
+                @for (i of r.ideas; track $index) {
+                  <div class="result-card"><div class="row"><b style="flex:1">{{ i.title }}</b><span class="badge badge-info">{{ i.format }}</span></div>
+                    <p class="text-2 mt-8">{{ i.description }}</p><p class="mt-8"><b>Hook:</b> {{ i.hook }}</p></div>
+                }
+              }
+              @case ('reels') {
+                @for (i of r.ideas; track $index) {
+                  <div class="result-card"><div class="row"><b style="flex:1">{{ i.title }}</b><span class="badge">{{ i.durationSeconds }}s</span></div>
+                    <p class="text-2 mt-8">{{ i.concept }}</p><p class="mt-8"><b>Hook:</b> {{ i.hook }}</p>
+                    @if (i.shots?.length) { <ol class="small">@for (s of i.shots; track $index) { <li>{{ s }}</li> }</ol> }</div>
+                }
+              }
+              @case ('script') {
+                <div class="result-card script">
+                  <div><span class="badge badge-info">Hook</span><p>{{ r.hook }}</p></div>
+                  <div><span class="badge badge-info">Main content</span><p>{{ r.mainContent }}</p></div>
+                  <div><span class="badge badge-pink">CTA</span><p>{{ r.cta }}</p></div>
+                  <div><span class="badge">Ending</span><p>{{ r.ending }}</p></div>
+                  <div><span class="badge">Voice-over</span><p class="pre">{{ r.voiceOver }}</p></div>
+                  @if (r.textOverlays?.length) {
+                    <div><span class="badge">Text overlays</span>
+                      @for (o of r.textOverlays; track $index) { <p class="small">{{ o.startSeconds }}–{{ o.endSeconds }}s · {{ o.text }}</p> }</div>
+                  }
+                </div>
+              }
+              @case ('platform') {
+                @for (p of opts.platforms; track p) {
+                  @if (r[p]; as v) {
+                    <div class="result-card">
+                      <div class="row mb-8"><app-platform-icon [platform]="p" [size]="22" /><b>{{ meta[p].name }}</b></div>
+                      @if (v.title) { <p><b>{{ v.title }}</b></p> }
+                      <p class="pre">{{ v.caption }}</p>
+                      <div class="row-wrap mt-8">@for (h of v.hashtags; track h) { <span class="chip">#{{ h }}</span> }</div>
+                      <button class="btn btn-sm mt-8" type="button" (click)="copy(v.caption + '\n\n' + asText(v.hashtags))"><app-icon name="copy" [size]="14" /> Copy</button>
+                    </div>
+                  }
+                }
+              }
+            }
+          } @else {
+            <div class="placeholder"><app-icon name="sparkles" [size]="36" /><p>Fill in the brief and click Generate.<br />Results use your brand voice, keywords and language.</p></div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+</div>
+
+@if (showImage() && brands.currentBrandId()) {
+  <app-ai-image-dialog [brandId]="brands.currentBrandId()!" [topic]="brief.topic" (used)="onImageUsed($event)" (closed)="showImage.set(false)" />
+}

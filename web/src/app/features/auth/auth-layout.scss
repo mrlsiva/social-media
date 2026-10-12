@@ -1,0 +1,9 @@
+:host { display: block; min-height: 100vh; }
+.auth { display: grid; grid-template-columns: 1.05fr 1fr; min-height: 100vh; }
+.panel { display: grid; place-items: center; padding: 32px; background: var(--bg); }
+.form-card { width: min(420px, 100%); }
+.form-card h2 { font-size: 24px; }
+.form-card .sub { color: var(--text-2); margin: 6px 0 24px; }
+form { display: flex; flex-direction: column; gap: 14px; }
+.foot { text-align: center; margin-top: 18px; color: var(--text-2); }
+@media (max-width: 900px) { .auth { grid-template-columns: 1fr; } app-auth-hero { display: none; } }

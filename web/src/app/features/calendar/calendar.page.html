@@ -1,0 +1,97 @@
+<div class="page">
+  <div class="page-header">
+    <div><h1>Content calendar</h1><p>Drag posts to schedule or reschedule them. {{ brands.currentBrand()?.name }}</p></div>
+    <div class="legend">
+      <span><i class="draft"></i>Draft</span><span><i class="scheduled"></i>Scheduled</span><span><i class="publishing"></i>Publishing</span>
+      <span><i class="published"></i>Published</span><span><i class="failed"></i>Failed</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="toolbar">
+      <div class="row">
+        <button class="btn btn-sm" type="button" (click)="goToday()">Today</button>
+        <button class="btn btn-ghost btn-icon btn-sm" type="button" (click)="move(-1)"><app-icon name="chevron-left" /></button>
+        <button class="btn btn-ghost btn-icon btn-sm" type="button" (click)="move(1)"><app-icon name="chevron-right" /></button>
+        <h2>{{ title() }}</h2>
+      </div>
+      <div class="segmented">
+        <button type="button" [class.active]="view() === 'month'" (click)="view.set('month')">Month</button>
+        <button type="button" [class.active]="view() === 'week'" (click)="view.set('week')">Week</button>
+        <button type="button" [class.active]="view() === 'day'" (click)="view.set('day')">Day</button>
+      </div>
+    </div>
+
+    @if (view() === 'month') {
+      <div class="month">
+        @for (w of weekdays; track w) { <div class="dow">{{ w }}</div> }
+        @for (d of days(); track d.getTime()) {
+          <div class="cell" [class.out]="!inMonth(d)" [class.today]="isToday(d)" [class.drop]="dropTarget() === key(d)"
+            (dragover)="onDragOver($event, key(d))" (dragleave)="dropTarget.set(null)" (drop)="onDrop($event, d)" (dblclick)="newPost(d)">
+            <div class="cell-head"><button type="button" class="day-num" (click)="openDay(d)">{{ d.getDate() }}</button>
+              <button type="button" class="add" (click)="newPost(d)" title="New post"><app-icon name="plus" [size]="13" /></button></div>
+            @for (e of eventsOn(d).slice(0, 4); track e.id) {
+              <div class="event {{ e.status }}" [draggable]="canMove(e)" (dragstart)="onDragStart($event, e)" (dragend)="dragId.set(null)" (click)="select(e)">
+                <span class="time">{{ e.date | date: 'h:mm a' }}</span>
+                <span class="truncate">{{ e.title }}</span>
+                <span class="pf">@for (p of e.platforms; track $index) { <app-platform-icon [platform]="p.platform" [size]="12" /> }</span>
+              </div>
+            }
+            @if (eventsOn(d).length > 4) { <button type="button" class="more" (click)="openDay(d)">+{{ eventsOn(d).length - 4 }} more</button> }
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="timeline" [class.single]="view() === 'day'">
+        <div class="tl-head">
+          <div></div>
+          @for (d of days(); track d.getTime()) {
+            <div class="tl-day" [class.today]="isToday(d)"><span>{{ d | date: 'EEE' }}</span><b>{{ d.getDate() }}</b></div>
+          }
+        </div>
+        <div class="tl-body">
+          @for (h of hours; track h) {
+            <div class="tl-row">
+              <div class="tl-hour">{{ h === 0 ? '12 AM' : h < 12 ? h + ' AM' : h === 12 ? '12 PM' : (h - 12) + ' PM' }}</div>
+              @for (d of days(); track d.getTime()) {
+                <div class="slot" [class.drop]="dropTarget() === key(d, h)" (dragover)="onDragOver($event, key(d, h))" (dragleave)="dropTarget.set(null)"
+                  (drop)="onDrop($event, d, h)" (dblclick)="newPost(d, h)">
+                  @for (e of eventsOn(d, h); track e.id) {
+                    <div class="event {{ e.status }}" [draggable]="canMove(e)" (dragstart)="onDragStart($event, e)" (dragend)="dragId.set(null)" (click)="select(e)">
+                      <span class="time">{{ e.date | date: 'h:mm' }}</span><span class="truncate">{{ e.title }}</span>
+                      <span class="pf">@for (p of e.platforms; track $index) { <app-platform-icon [platform]="p.platform" [size]="12" /> }</span>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+</div>
+
+@if (selected(); as e) {
+  <app-modal [title]="e.title" (closed)="selected.set(null)">
+    <div class="stack">
+      @if (e.thumbnailUrl) { <img [src]="e.thumbnailUrl" alt="" class="detail-img" /> }
+      <div class="row-wrap"><app-status-badge [status]="e.status" /><span class="badge">{{ e.contentType }}</span>
+        <span class="muted small">{{ e.date | date: 'EEEE d MMM y, h:mm a' }}</span></div>
+      <div class="stack" style="gap:6px">
+        @for (p of e.platforms; track $index) {
+          <div class="row"><app-platform-icon [platform]="p.platform" [size]="20" /><span style="flex:1">{{ p.platform }}</span><app-status-badge [status]="p.status" /></div>
+        } @empty { <span class="muted small">No platforms selected yet.</span> }
+      </div>
+      @if (canMove(e)) {
+        <div class="field"><label>{{ e.status === 'scheduled' ? 'Reschedule' : 'Schedule' }}</label>
+          <div class="row"><input class="input" type="datetime-local" [(ngModel)]="rescheduleAt" /><button class="btn btn-primary" type="button" (click)="reschedule()">Save</button></div></div>
+      }
+    </div>
+    <div modal-footer class="modal-footer">
+      <button class="btn btn-danger" type="button" style="margin-right:auto" (click)="remove(e)"><app-icon name="trash" [size]="15" /> Delete</button>
+      <button class="btn" type="button" (click)="duplicate(e)"><app-icon name="copy" [size]="15" /> Duplicate</button>
+      <button class="btn btn-primary" type="button" (click)="edit(e)"><app-icon name="edit" [size]="15" /> Edit</button>
+    </div>
+  </app-modal>
+}
