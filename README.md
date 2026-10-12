@@ -11,7 +11,24 @@ Create AI-generated posts and reels for **any number of brands** (e.g. *Sling Gr
 ---
 
 ## Contents
-1. [Features](#features) · 2. [Folder structure](#folder-structure) · 3. [Installation](#installation) · 4. [MySQL & phpMyAdmin](#mysql--phpmyadmin-setup) · 5. [Environment variables](#environment-variables) · 6. [Migrations & seed](#migrations--seed) · 7. [Run the API](#run-the-api) · 8. [Run the web app](#run-the-web-app) · 9. [Redis / BullMQ](#redis--bullmq) · 10. [Swagger](#swagger--api-documentation) · 11. [API overview](#api-overview) · 12. [Social OAuth](#social-oauth-configuration) · 13. [Production](#production-deployment) · 14. [Mobile](#mobile-app-integration) · 15. [Testing](#testing) · 16. [Architecture notes](#architecture-notes) · 17. [Current limitations](#current-limitations)
+
+1. [Features](#features)
+2. [Folder structure](#folder-structure)
+3. [Installation](#installation)
+4. [MySQL & phpMyAdmin](#mysql--phpmyadmin-setup)
+5. [Environment variables](#environment-variables)
+6. [Migrations & seed](#migrations--seed)
+7. [Run the API](#run-the-api)
+8. [Run the web app](#run-the-web-app)
+9. [Redis / BullMQ](#redis--bullmq)
+10. [Swagger](#swagger--api-documentation)
+11. [API overview](#api-overview)
+12. [Social OAuth](#social-oauth-configuration)
+13. [Production](#production-deployment)
+14. [Mobile](#mobile-app-integration)
+15. [Testing](#testing)
+16. [Architecture notes](#architecture-notes)
+17. [Current limitations](#current-limitations)
 
 ---
 
@@ -205,7 +222,7 @@ Base URL `/api/v1`, header `Authorization: Bearer <accessToken>`. Responses: `{ 
 | Subscriptions | `GET /subscriptions/plans` · `GET /subscriptions/current` · admin: `GET/PUT /subscriptions/admin/plans`, `POST /subscriptions/admin/assign` |
 | Health | `GET /health` |
 
-Error codes include `AUTH_INVALID`, `TOKEN_EXPIRED`, `REFRESH_TOKEN_INVALID`, `BRAND_NOT_FOUND`, `BRAND_ACCESS_DENIED`, `SOCIAL_ACCOUNT_NOT_CONNECTED`, `SOCIAL_PLATFORM_NOT_CONFIGURED`, `MEDIA_UPLOAD_FAILED`, `MEDIA_INVALID_TYPE`, `MEDIA_TOO_LARGE`, `AI_GENERATION_FAILED`, `AI_PROVIDER_NOT_CONFIGURED`, `PUBLISH_FAILED`, `PLATFORM_API_ERROR`, `CONTENT_NOT_SUPPORTED`, `USAGE_LIMIT_REACHED`, `VALIDATION_FAILED`, `RATE_LIMITED` (full list: `backend/src/common/errors/error-codes.ts`). Request/response examples: [`mobile-api-docs/README.md`](mobile-api-docs/README.md#example-requests--responses).
+Error codes include `AUTH_INVALID`, `TOKEN_EXPIRED`, `REFRESH_TOKEN_INVALID`, `BRAND_NOT_FOUND`, `BRAND_ACCESS_DENIED`, `SOCIAL_ACCOUNT_NOT_CONNECTED`, `SOCIAL_PLATFORM_NOT_CONFIGURED`, `MEDIA_UPLOAD_FAILED`, `MEDIA_INVALID_TYPE`, `MEDIA_TOO_LARGE`, `AI_GENERATION_FAILED`, `AI_PROVIDER_NOT_CONFIGURED`, `PUBLISH_FAILED`, `PLATFORM_API_ERROR`, `CONTENT_NOT_SUPPORTED`, `USAGE_LIMIT_REACHED`, `VALIDATION_FAILED`, `RATE_LIMITED` (full list: `backend/src/common/errors/error-codes.ts`). Request/response examples: [`mobile-api-docs/README.md`](mobile-api-docs/README.md).
 
 ## Social OAuth configuration
 
@@ -255,5 +272,3 @@ Being explicit about what is and isn't wired up in this codebase:
 - Insights metric names change between Graph API versions; post-level reach/impressions for Facebook are fetched best-effort, engagement counts always.
 - AI video uses OpenAI Sora (4/8/12 s clips). The storyboard (scenes, overlays, voice-over, subtitles SRT, music) is generated and passed to the renderer; burning overlays/subtitles into an uploaded video would need an FFmpeg pipeline (the `media-processing` queue is the place to add it).
 - Payments are not integrated — plans are assigned by an admin endpoint designed to be called from a Stripe/Razorpay webhook. Mobile push delivery uses a `PushSender` abstraction with a no-op default (plug in FCM/APNs).
-#   s o c i a l - m e d i a  
- 
