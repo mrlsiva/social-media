@@ -5,6 +5,10 @@ import { Shell } from './layout/shell';
 export const routes: Routes = [
   // Public landing page; signed-in users go straight to the dashboard (guestGuard).
   { path: '', pathMatch: 'full', canActivate: [guestGuard], loadComponent: () => import('./features/landing/landing.page').then((m) => m.LandingPage) },
+  // Public legal pages (linked from Meta / Google app settings), open to everyone.
+  { path: 'privacy-policy', title: 'Privacy Policy', loadComponent: () => import('./features/legal/privacy-policy.page').then((m) => m.PrivacyPolicyPage) },
+  { path: 'terms', title: 'Terms of Service', loadComponent: () => import('./features/legal/terms.page').then((m) => m.TermsPage) },
+  { path: 'data-deletion', title: 'Data Deletion', loadComponent: () => import('./features/legal/data-deletion.page').then((m) => m.DataDeletionPage) },
   { path: 'login', canActivate: [guestGuard], loadComponent: () => import('./features/auth/login.page').then((m) => m.LoginPage) },
   { path: 'register', canActivate: [guestGuard], loadComponent: () => import('./features/auth/register.page').then((m) => m.RegisterPage) },
   {

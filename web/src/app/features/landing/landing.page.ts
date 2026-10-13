@@ -248,8 +248,10 @@ const FAQS = [
           <a href="#features">Features</a>
           <a href="#pricing">Pricing</a>
           <a href="/user-guide.html" target="_blank" rel="noopener">User guide</a>
+          <a routerLink="/privacy-policy">Privacy</a>
+          <a routerLink="/terms">Terms</a>
+          <a routerLink="/data-deletion">Data deletion</a>
           <a routerLink="/login">Log in</a>
-          <a routerLink="/register">Sign up</a>
         </nav>
         <span class="copy">© {{ year }} {{ appName }}. All rights reserved.</span>
       </div>
