@@ -61,4 +61,11 @@ export class CallbackQueryDto {
   @IsOptional() @IsString() error?: string;
   @IsOptional() @IsString() error_description?: string;
   @IsOptional() @IsString() error_reason?: string;
+  // Extra parameters Google appends to the redirect. Unused, but the global
+  // forbidNonWhitelisted pipe would otherwise reject the callback.
+  @IsOptional() @IsString() iss?: string;
+  @IsOptional() @IsString() scope?: string;
+  @IsOptional() @IsString() authuser?: string;
+  @IsOptional() @IsString() prompt?: string;
+  @IsOptional() @IsString() hd?: string;
 }
