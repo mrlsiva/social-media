@@ -3,6 +3,8 @@ import { adminGuard, authGuard, guestGuard } from './core/guards';
 import { Shell } from './layout/shell';
 
 export const routes: Routes = [
+  // Public landing page; signed-in users go straight to the dashboard (guestGuard).
+  { path: '', pathMatch: 'full', canActivate: [guestGuard], loadComponent: () => import('./features/landing/landing.page').then((m) => m.LandingPage) },
   { path: 'login', canActivate: [guestGuard], loadComponent: () => import('./features/auth/login.page').then((m) => m.LoginPage) },
   { path: 'register', canActivate: [guestGuard], loadComponent: () => import('./features/auth/register.page').then((m) => m.RegisterPage) },
   {
