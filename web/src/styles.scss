@@ -108,8 +108,9 @@ img { max-width: 100%; display: block; }
 .btn-primary:hover { background: var(--primary-600); }
 .btn-secondary { background: var(--secondary); border-color: var(--secondary); color: #fff; }
 .btn-secondary:hover { background: var(--secondary-600); }
-.btn-gradient { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: #fff; border: 0; box-shadow: 0 6px 16px rgba(0, 120, 184, .25); }
-.btn-gradient:hover { filter: brightness(1.05); }
+.btn-gradient,
+.btn-gradient:hover { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: #fff; border: 0; box-shadow: 0 6px 16px rgba(0, 120, 184, .25); }
+.btn-gradient:hover:not(:disabled) { filter: brightness(1.08); }
 .btn-ghost { background: transparent; border-color: transparent; color: var(--text-2); }
 .btn-ghost:hover { background: var(--surface-2); color: var(--text); }
 .btn-danger { color: var(--danger); border-color: #f2c2c8; }

@@ -9,6 +9,7 @@
 .ig .ava { box-shadow: 0 0 0 2px #fff, 0 0 0 4px #e1306c; }
 .dots { color: var(--muted); }
 .ig-actions { display: flex; gap: 14px; padding: 10px 12px 4px; }
+.ig-text b { margin-right: 4px; }
 .ig-text, .fb-text, .yt-desc { padding: 6px 12px 12px; white-space: normal; overflow-wrap: anywhere; line-height: 1.45; }
 .fb-text { padding-top: 0; }
 .clamp { display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }

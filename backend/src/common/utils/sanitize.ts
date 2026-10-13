@@ -1,9 +1,18 @@
 import { Transform } from 'class-transformer';
 import sanitizeHtml from 'sanitize-html';
 
-/** Strips all HTML tags/attributes from a string. */
+const ENTITIES: Record<string, string> = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'" };
+
+/**
+ * Strips all HTML tags/attributes from a string, returning plain text.
+ * sanitize-html entity-encodes the remaining text (`&` -> `&amp;`), which would
+ * then be stored and published verbatim, so those entities are decoded again.
+ * Clients must still escape this text when rendering it as HTML.
+ */
 export function stripHtml(value: string): string {
-  return sanitizeHtml(value, { allowedTags: [], allowedAttributes: {} }).trim();
+  return sanitizeHtml(value, { allowedTags: [], allowedAttributes: {} })
+    .replace(/&(?:amp|lt|gt|quot|#39);/g, (e) => ENTITIES[e])
+    .trim();
 }
 
 /**

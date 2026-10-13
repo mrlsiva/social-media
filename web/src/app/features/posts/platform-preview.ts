@@ -64,6 +64,7 @@ export class PlatformPreview {
     const t = this.texts().find((x) => x.platform === this.active()) ?? { platform: this.active(), caption: '', hashtags: [] };
     return composePreviewText(t, { cta: this.cta(), linkUrl: this.linkUrl(), mentions: this.mentions() });
   });
+  protected readonly igHandle = computed(() => (this.brand()?.name ?? 'yourbrand').toLowerCase().replace(/\s+/g, ''));
   protected readonly title = computed(() => this.texts().find((x) => x.platform === this.active())?.title ?? '');
   protected readonly limit = computed(() => LIMITS[this.active()] ?? 3000);
   protected readonly isVertical = computed(() => this.contentType() === 'reel');

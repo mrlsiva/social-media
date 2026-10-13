@@ -11,11 +11,11 @@
       <div class="phone ig">
         <div class="ig-head">
           <span class="ava" [style.background]="brand()?.primaryColor ?? '#0078B8'">@if (brand()?.logoUrl) { <img [src]="brand()!.logoUrl" alt="" /> } @else { {{ initials(brand()?.name ?? 'B') }} }</span>
-          <b>{{ (brand()?.name ?? 'yourbrand').toLowerCase().replace(' ', '') }}</b><span class="spacer"></span><span class="dots">•••</span>
+          <b>{{ igHandle() }}</b><span class="spacer"></span><span class="dots">•••</span>
         </div>
         <ng-container *ngTemplateOutlet="mediaTpl" />
         <div class="ig-actions"><app-icon name="heart" /><app-icon name="message" /><app-icon name="send" /><span class="spacer"></span><app-icon name="bookmark" /></div>
-        <div class="ig-text"><b>{{ (brand()?.name ?? 'yourbrand').toLowerCase().replace(' ', '') }}</b> <span [innerHTML]="richText()"></span></div>
+        <div class="ig-text"><b>{{ igHandle() }}</b> <span [innerHTML]="richText()"></span></div>
       </div>
     }
     <!-- Facebook -->
