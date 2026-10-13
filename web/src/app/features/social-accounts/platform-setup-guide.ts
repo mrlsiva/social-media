@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import { AuthService } from '../../core/auth.service';
 import { Platform, PlatformInfo } from '../../core/models';
 import { ToastService } from '../../core/toast.service';
 import { Icon } from '../../shared/icon';
@@ -13,6 +14,8 @@ interface Guide {
   steps: string[];
   env: (callback: string) => string;
   limits: string[];
+  /** Tips only relevant to whoever runs the server; hidden from regular users. */
+  adminLimits?: string[];
 }
 
 const META_ENV = (callback: string) =>
@@ -40,8 +43,10 @@ const GUIDES: Partial<Record<Platform, Guide>> = {
       META_STEPS[4],
     ],
     env: META_ENV,
-    limits: [
+    adminLimits: [
       'Instagram downloads media from <b>APP_URL</b>, so it must be a <b>public HTTPS</b> address. On localhost use a tunnel (ngrok / cloudflared).',
+    ],
+    limits: [
       'Images are published as JPEG (PNG/WEBP are converted automatically). Aspect ratio 4:5 – 1.91:1.',
       'Up to 100 API posts per 24 h per account · captions ≤ 2,200 chars · ≤ 30 hashtags · carousels 2–10 items.',
     ],
@@ -74,11 +79,12 @@ const GUIDES: Partial<Record<Platform, Guide>> = {
       'Copy the client ID and secret into <b>backend/.env</b> and restart the API.',
     ],
     env: (callback) => `GOOGLE_CLIENT_ID=xxxx.apps.googleusercontent.com\nGOOGLE_CLIENT_SECRET=xxxx\nGOOGLE_REDIRECT_URI=${callback}`,
-    limits: [
+    adminLimits: [
       'Videos from <b>unaudited</b> API projects stay <b>private</b>. Submit the YouTube API compliance audit to publish publicly.',
       '<span class="kbd">youtube.upload</span> is a sensitive scope, so Google verification is needed for production.',
-      'Default quota is 10,000 units/day and uploads are expensive. Custom thumbnails need a verified channel.',
+      'Default quota is 10,000 units/day and uploads are expensive.',
     ],
+    limits: ['Custom thumbnails need a verified YouTube channel.'],
   },
   linkedin: {
     requirements: [
@@ -107,15 +113,17 @@ const GUIDES: Partial<Record<Platform, Guide>> = {
   imports: [Modal, Icon, PlatformIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-modal [title]="platform().name + ' setup guide'" (closed)="closed.emit()">
+    <app-modal [title]="platform().name + (isAdmin() ? ' setup guide' : ' - how to connect')" (closed)="closed.emit()">
       @if (guide(); as g) {
         <div class="stack">
           <div class="row status">
             <app-platform-icon [platform]="platform().platform" [size]="32" />
             @if (platform().configured) {
-              <span class="ok"><app-icon name="check" [size]="15" /> Server is configured. You can click <b>Connect</b>.</span>
+              <span class="ok"><app-icon name="check" [size]="15" /> {{ platform().name }} is ready. You can click <b>Connect</b>.</span>
+            } @else if (isAdmin()) {
+              <span class="warn"><app-icon name="alert" [size]="15" /> Not configured yet. Finish step 2 to enable {{ platform().name }}.</span>
             } @else {
-              <span class="warn"><app-icon name="alert" [size]="15" /> Not configured yet. An administrator needs to finish step 2.</span>
+              <span class="warn"><app-icon name="alert" [size]="15" /> Not available yet. Contact your administrator to enable {{ platform().name }}.</span>
             }
           </div>
 
@@ -124,39 +132,47 @@ const GUIDES: Partial<Record<Platform, Guide>> = {
             <ul>@for (r of g.requirements; track $index) { <li [innerHTML]="r"></li> }</ul>
           </section>
 
-          <section>
-            <h3>2. Server setup <span class="muted small">(administrator, one time)</span></h3>
-            <ol>@for (s of g.steps; track $index) { <li [innerHTML]="s"></li> }</ol>
-            <a class="btn btn-sm mt-8" [href]="g.console.url" target="_blank" rel="noopener">
-              <app-icon name="external" [size]="14" /> Open {{ g.console.label }}
-            </a>
-          </section>
+          @if (isAdmin()) {
+            <section>
+              <h3>2. Server setup <span class="muted small">(administrator, one time)</span></h3>
+              <ol>@for (s of g.steps; track $index) { <li [innerHTML]="s"></li> }</ol>
+              <a class="btn btn-sm mt-8" [href]="g.console.url" target="_blank" rel="noopener">
+                <app-icon name="external" [size]="14" /> Open {{ g.console.label }}
+              </a>
+            </section>
+
+            <section>
+              <h3>Callback URL</h3>
+              <div class="copy-row">
+                <code>{{ callback() }}</code>
+                <button class="btn btn-ghost btn-icon btn-sm" type="button" title="Copy" (click)="copy(callback())"><app-icon name="copy" [size]="15" /></button>
+              </div>
+            </section>
+
+            <section>
+              <h3>backend/.env</h3>
+              <div class="copy-row">
+                <pre>{{ g.env(callback()) }}</pre>
+                <button class="btn btn-ghost btn-icon btn-sm" type="button" title="Copy" (click)="copy(g.env(callback()))"><app-icon name="copy" [size]="15" /></button>
+              </div>
+            </section>
+          }
 
           <section>
-            <h3>Callback URL</h3>
-            <div class="copy-row">
-              <code>{{ callback() }}</code>
-              <button class="btn btn-ghost btn-icon btn-sm" type="button" title="Copy" (click)="copy(callback())"><app-icon name="copy" [size]="15" /></button>
-            </div>
+            <h3>{{ isAdmin() ? 3 : 2 }}. Connect</h3>
+            <p class="text-2">
+              @if (isAdmin()) { Restart the API, reload this page and click <b>Connect</b> on the {{ platform().name }} card. }
+              @else { Click <b>Connect</b> on the {{ platform().name }} card. }
+              Sign in to {{ platform().name }} and approve the permissions.
+            </p>
           </section>
 
-          <section>
-            <h3>backend/.env</h3>
-            <div class="copy-row">
-              <pre>{{ g.env(callback()) }}</pre>
-              <button class="btn btn-ghost btn-icon btn-sm" type="button" title="Copy" (click)="copy(g.env(callback()))"><app-icon name="copy" [size]="15" /></button>
-            </div>
-          </section>
-
-          <section>
-            <h3>3. Connect</h3>
-            <p class="text-2">Restart the API, reload this page and click <b>Connect</b> on the {{ platform().name }} card. Sign in to {{ platform().name }} and approve the permissions.</p>
-          </section>
-
-          <section>
-            <h3>Limits &amp; tips</h3>
-            <ul>@for (l of g.limits; track $index) { <li [innerHTML]="l"></li> }</ul>
-          </section>
+          @if (limits().length) {
+            <section>
+              <h3>Limits &amp; tips</h3>
+              <ul>@for (l of limits(); track $index) { <li [innerHTML]="l"></li> }</ul>
+            </section>
+          }
         </div>
       }
     </app-modal>
@@ -173,10 +189,16 @@ const GUIDES: Partial<Record<Platform, Guide>> = {
 })
 export class PlatformSetupGuide {
   private readonly toast = inject(ToastService);
+  protected readonly isAdmin = inject(AuthService).isAdmin;
   readonly platform = input.required<PlatformInfo>();
   readonly closed = output<void>();
 
   protected readonly guide = computed(() => GUIDES[this.platform().platform]);
+  protected readonly limits = computed(() => {
+    const g = this.guide();
+    if (!g) return [];
+    return this.isAdmin() ? [...(g.adminLimits ?? []), ...g.limits] : g.limits;
+  });
   protected readonly callback = computed(() => {
     const p = this.platform();
     const route = p.platform === 'instagram' ? 'facebook' : p.platform;

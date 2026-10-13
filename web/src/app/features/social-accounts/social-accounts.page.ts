@@ -1,6 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { ApiService } from '../../core/api.service';
+import { AuthService } from '../../core/auth.service';
 import { BrandContextService } from '../../core/brand-context.service';
 import { Platform, PlatformInfo, SocialAccount } from '../../core/models';
 import { ToastService } from '../../core/toast.service';
@@ -38,11 +39,11 @@ const NOTES: Partial<Record<Platform, string>> = {
                     {{ connectedCount(p.platform) > 0 ? '✅ Connected (' + connectedCount(p.platform) + ')' : '⚠️ Not connected' }}
                   </span>
                 </div>
-                <button class="btn btn-ghost btn-icon btn-sm guide-btn" type="button" [title]="'How to set up ' + p.name"
-                  [attr.aria-label]="'How to set up ' + p.name" (click)="guideFor.set(p)"><app-icon name="info" [size]="18" /></button>
+                <button class="btn btn-ghost btn-icon btn-sm guide-btn" type="button" [title]="(isAdmin() ? 'How to set up ' : 'How to connect ') + p.name"
+                  [attr.aria-label]="(isAdmin() ? 'How to set up ' : 'How to connect ') + p.name" (click)="guideFor.set(p)"><app-icon name="info" [size]="18" /></button>
                 <button class="btn btn-sm" [class.btn-primary]="connectedCount(p.platform) === 0" type="button"
                   [disabled]="!p.configured || connecting() === p.platform" (click)="connect(p.platform)"
-                  [title]="p.configured ? '' : 'The server administrator must add OAuth app credentials first'">
+                  [title]="p.configured ? '' : isAdmin() ? 'Add the OAuth app credentials in the backend .env first' : 'Not available yet. Contact your administrator.'">
                   @if (connecting() === p.platform) { <span class="spinner"></span> } @else { <app-icon name="link" [size]="15" /> }
                   {{ connectedCount(p.platform) ? 'Add another' : 'Connect' }}
                 </button>
@@ -50,8 +51,13 @@ const NOTES: Partial<Record<Platform, string>> = {
               <p class="note">{{ notes[p.platform] }}</p>
               @if (!p.configured) {
                 <div class="alert alert-warning mt-8"><app-icon name="alert" [size]="16" />
-                  <span>Not configured on the server. Set the {{ p.platform === 'youtube' ? 'GOOGLE_*' : p.platform === 'linkedin' ? 'LINKEDIN_*' : 'META_*' }} variables in the backend .env.
-                    <button class="link-btn" type="button" (click)="guideFor.set(p)">View setup guide</button></span></div>
+                  @if (isAdmin()) {
+                    <span>Not configured on the server. Set the {{ p.platform === 'youtube' ? 'GOOGLE_*' : p.platform === 'linkedin' ? 'LINKEDIN_*' : 'META_*' }} variables in the backend .env.
+                      <button class="link-btn" type="button" (click)="guideFor.set(p)">View setup guide</button></span>
+                  } @else {
+                    <span>{{ p.name }} isn't available yet. Contact your administrator to enable it.</span>
+                  }
+                </div>
               }
               @for (a of byPlatform()[p.platform] ?? []; track a.id) {
                 <div class="account">
@@ -104,6 +110,7 @@ export class SocialAccountsPage {
   private readonly api = inject(ApiService);
   private readonly toast = inject(ToastService);
   protected readonly brands = inject(BrandContextService);
+  protected readonly isAdmin = inject(AuthService).isAdmin;
   protected readonly platforms = signal<PlatformInfo[]>([]);
   protected readonly accounts = signal<SocialAccount[]>([]);
   protected readonly connecting = signal<Platform | null>(null);
