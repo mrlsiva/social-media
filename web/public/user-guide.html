@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SocialPilot AI User Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #f4f6fb; --paper: #ffffff; --ink: #172033; --ink-2: #4a5568; --muted: #7a8599;
+    --line: #e3e8f0; --brand: #3b6fe0; --brand-2: #e0457b; --soft: #eef3ff; --soft-2: #fff1f5;
+    --ok: #12805c; --warn: #b26a00; --warn-bg: #fff6e5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e1320; --paper: #161d2e; --ink: #e8edf7; --ink-2: #b4bdd0; --muted: #8590a6;
+      --line: #273148; --brand: #7aa2ff; --brand-2: #ff7aa6; --soft: #1c2742; --soft-2: #2c1d2a;
+      --ok: #4ccf9d; --warn: #ffb547; --warn-bg: #2d2416;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e1320; --paper: #161d2e; --ink: #e8edf7; --ink-2: #b4bdd0; --muted: #8590a6;
+    --line: #273148; --brand: #7aa2ff; --brand-2: #ff7aa6; --soft: #1c2742; --soft-2: #2c1d2a;
+    --ok: #4ccf9d; --warn: #ffb547; --warn-bg: #2d2416;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.6 "Plus Jakarta Sans", system-ui, sans-serif; }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 32px 16px 64px; }
+  .sheet { background: var(--paper); border: 1px solid var(--line); border-radius: 20px; padding: 40px; margin-bottom: 24px; }
+  h1, h2, h3 { line-height: 1.2; margin: 0; letter-spacing: -0.01em; }
+  h2 { font-size: 24px; margin-bottom: 6px; }
+  h3 { font-size: 16px; margin-bottom: 4px; }
+  p { margin: 0 0 10px; color: var(--ink-2); }
+  ul, ol { margin: 0; padding-left: 20px; color: var(--ink-2); }
+  li { margin-bottom: 6px; }
+  b { color: var(--ink); }
+  .ui { display: inline-block; padding: 0 7px; border-radius: 6px; background: var(--soft); color: var(--brand); font-weight: 600; font-size: 13.5px; white-space: nowrap; }
+
+  /* Cover */
+  .cover { background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; border: 0; padding: 56px 40px; position: relative; overflow: hidden; }
+  .cover::after { content: ""; position: absolute; right: -80px; top: -80px; width: 320px; height: 320px; border-radius: 50%; background: rgba(255,255,255,0.12); }
+  .logo { display: inline-flex; align-items: center; gap: 10px; font-weight: 800; font-size: 18px; }
+  .logo .mark { width: 38px; height: 38px; border-radius: 11px; background: rgba(255,255,255,0.2); display: grid; place-items: center; }
+  .cover h1 { font-size: 44px; font-weight: 800; margin: 36px 0 12px; max-width: 560px; }
+  .cover p { color: rgba(255,255,255,0.9); font-size: 17px; max-width: 540px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; position: relative; z-index: 1; }
+  .chips span { background: rgba(255,255,255,0.18); padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; }
+
+  /* Quick start */
+  .steps { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-top: 20px; }
+  .step { background: var(--soft); border-radius: 14px; padding: 16px 14px; }
+  .step .n { width: 30px; height: 30px; border-radius: 50%; background: var(--brand); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 14px; margin-bottom: 10px; }
+  .step b { display: block; font-size: 14px; margin-bottom: 2px; }
+  .step span { font-size: 12.5px; color: var(--ink-2); line-height: 1.45; display: block; }
+
+  .section-head { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 18px; }
+  .badge { flex: none; width: 44px; height: 44px; border-radius: 12px; background: var(--soft); color: var(--brand); display: grid; place-items: center; font-weight: 800; font-size: 18px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .box { border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+  .tip { background: var(--soft-2); border-radius: 12px; padding: 12px 16px; margin-top: 16px; font-size: 14px; color: var(--ink-2); }
+  .tip b { color: var(--brand-2); }
+  .note { background: var(--warn-bg); border-radius: 12px; padding: 12px 16px; margin-top: 16px; font-size: 14px; color: var(--ink-2); }
+  .note b { color: var(--warn); }
+  .shield { display: flex; gap: 12px; align-items: center; background: var(--soft); border-radius: 12px; padding: 14px 16px; margin: 4px 0 18px; font-size: 14px; color: var(--ink-2); }
+  .shield svg { flex: none; color: var(--ok); }
+
+  .platforms { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .pf { display: flex; gap: 12px; border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+  .pf .ic { flex: none; width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 15px; }
+  .pf p { font-size: 13.5px; margin: 0; }
+  .ig { background: linear-gradient(45deg, #f9a03f, #d62976, #962fbf); } .fb { background: #1877f2; } .yt { background: #ff0000; } .li { background: #0a66c2; }
+
+  .buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px; }
+  .buttons .box { text-align: center; }
+  .buttons .box p { font-size: 13.5px; margin: 6px 0 0; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  td { padding: 12px 10px; border-top: 1px solid var(--line); vertical-align: top; color: var(--ink-2); }
+  td:first-child { width: 42%; color: var(--ink); font-weight: 600; }
+  tr:first-child td { border-top: 0; }
+
+  .footer { text-align: center; color: var(--muted); font-size: 13px; }
+  .footer .logo { color: var(--ink); justify-content: center; }
+  .footer .logo .mark { background: var(--soft); color: var(--brand); }
+
+  @media (max-width: 760px) {
+    .sheet { padding: 24px 18px; }
+    .cover { padding: 40px 22px; }
+    .cover h1 { font-size: 32px; }
+    .steps { grid-template-columns: 1fr 1fr; }
+    .grid-2, .platforms, .buttons { grid-template-columns: 1fr; }
+  }
+  @media print {
+    :root { --bg: #fff; }
+    body { font-size: 12.5px; }
+    .wrap { max-width: none; padding: 0; }
+    .sheet { border: 0; border-radius: 0; margin: 0; padding: 24px 28px; break-inside: avoid; }
+    .page-break { break-before: page; }
+    .cover { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .step, .badge, .tip, .note, .shield, .pf .ic, .ui { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Cover -->
+  <section class="sheet cover">
+    <div class="logo"><span class="mark">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg>
+    </span> SocialPilot AI</div>
+    <h1>Plan, create and publish all your social media in one place</h1>
+    <p>This guide walks you through getting started: setting up your brand, connecting your accounts and publishing your first post in minutes.</p>
+    <div class="chips"><span>Instagram</span><span>Facebook</span><span>YouTube</span><span>LinkedIn</span><span>AI captions, images &amp; reels</span></div>
+  </section>
+
+  <!-- Quick start -->
+  <section class="sheet">
+    <h2>Get started in 5 steps</h2>
+    <p>Most people are ready to post in under 10 minutes.</p>
+    <div class="steps">
+      <div class="step"><div class="n">1</div><b>Sign up</b><span>Create your account and log in.</span></div>
+      <div class="step"><div class="n">2</div><b>Add your brand</b><span>Logo, colours and the voice you want.</span></div>
+      <div class="step"><div class="n">3</div><b>Connect accounts</b><span>Link Instagram, Facebook, YouTube or LinkedIn.</span></div>
+      <div class="step"><div class="n">4</div><b>Create a post</b><span>Write it yourself or let AI draft it.</span></div>
+      <div class="step"><div class="n">5</div><b>Publish</b><span>Post now or schedule it for later.</span></div>
+    </div>
+  </section>
+
+  <!-- 1. Account -->
+  <section class="sheet">
+    <div class="section-head"><div class="badge">1</div><div><h2>Create your account &amp; log in</h2><p>Open the app in any modern browser on your computer, tablet or phone.</p></div></div>
+    <div class="grid-2">
+      <div class="box">
+        <h3>New here?</h3>
+        <ol>
+          <li>Click <span class="ui">Create an account</span>.</li>
+          <li>Enter your first name, last name, work email and a password.</li>
+          <li>Submit, and you're taken straight to your dashboard.</li>
+        </ol>
+      </div>
+      <div class="box">
+        <h3>Already have an account?</h3>
+        <ol>
+          <li>Enter your email and password on the <b>Welcome back</b> screen.</li>
+          <li>Click <span class="ui">Log in</span>.</li>
+          <li>Click your initials at the top right for <b>Settings</b>, <b>Subscription</b> and <b>Log out</b>.</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. Brand -->
+  <section class="sheet">
+    <div class="section-head"><div class="badge">2</div><div><h2>Set up your brand</h2><p>A brand is a business you post for. Running more than one? Add each one as its own brand and switch between them from the menu at the top of every page.</p></div></div>
+    <ol>
+      <li>Go to <span class="ui">Brands</span> in the left menu and click <span class="ui">Add brand</span>.</li>
+      <li><b>Brand identity:</b> name, description, logo, primary and secondary colours.</li>
+      <li><b>Contact:</b> website, email, phone, address and timezone. Scheduled posts go out in this timezone.</li>
+      <li><b>Content defaults &amp; AI voice:</b> default tone, language, hashtags, call to action, keywords, words to avoid and emoji usage.</li>
+      <li><b>Team:</b> invite colleagues by email to work on this brand with you.</li>
+    </ol>
+    <div class="tip"><b>Tip:</b> The more you fill in under <i>Brand voice</i>, the more your AI-written posts will sound like you. For example: "Friendly experts who explain things simply. Optimistic, never pushy."</div>
+  </section>
+
+  <!-- 3. Connect -->
+  <section class="sheet page-break">
+    <div class="section-head"><div class="badge">3</div><div><h2>Connect your social accounts</h2><p>Connect each account once and post to all of them from one screen.</p></div></div>
+    <div class="shield">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+      <span><b>Your password stays with you.</b> You sign in on the official Instagram, Facebook, Google or LinkedIn page. We never see or store your password, and you can remove access at any time.</span>
+    </div>
+    <h3>How to connect</h3>
+    <ol>
+      <li>Pick the right brand from the menu at the top.</li>
+      <li>Open <span class="ui">Social Accounts</span> in the left menu.</li>
+      <li>Click <span class="ui">Connect</span> on the platform you want.</li>
+      <li>Sign in on the platform's own page and click <b>Allow</b>.</li>
+      <li>You'll come back here and the card will show <b style="color:var(--ok)">Connected</b>. Use <span class="ui">Add another</span> to link more pages or channels.</li>
+    </ol>
+
+    <h3 style="margin-top:22px">What each platform needs</h3>
+    <div class="platforms" style="margin-top:10px">
+      <div class="pf"><div class="ic ig">IG</div><div><h3>Instagram</h3><p>A <b>Business</b> or <b>Creator</b> account linked to a Facebook Page. Personal accounts can't be connected.</p></div></div>
+      <div class="pf"><div class="ic fb">f</div><div><h3>Facebook</h3><p>You must be an admin of the <b>Facebook Page</b>. Posts appear as the Page, not your personal profile.</p></div></div>
+      <div class="pf"><div class="ic yt">▶</div><div><h3>YouTube</h3><p>A Google account with a <b>YouTube channel</b>. Videos are uploaded to that channel.</p></div></div>
+      <div class="pf"><div class="ic li">in</div><div><h3>LinkedIn</h3><p>Posts go to your <b>personal profile</b>. Ask us if you'd like to post to a company page.</p></div></div>
+    </div>
+    <div class="note"><b>Account shows "Expired"?</b> This happens if you change your password or after about 60 days on LinkedIn. Click <span class="ui">Reconnect</span> and sign in again. Nothing else is lost.</div>
+  </section>
+
+  <!-- 4. Create post -->
+  <section class="sheet">
+    <div class="section-head"><div class="badge">4</div><div><h2>Create posts &amp; reels</h2><p>Use <span class="ui">Create Post</span> for images and carousels, or <span class="ui">Create Reel</span> for short vertical videos.</p></div></div>
+    <ol>
+      <li><b>Choose platforms:</b> tick the connected accounts you want to post to.</li>
+      <li><b>Write your caption</b>, or click <span class="ui">AI Generate</span> to get a draft with hashtags and a call to action.</li>
+      <li><b>Add media:</b> use <span class="ui">Upload / Library</span>, or create visuals with <span class="ui">AI image</span> and <span class="ui">AI video</span>.</li>
+      <li><b>Fine-tune per platform</b> under <i>Platform-specific content</i>, e.g. a shorter caption for one network.</li>
+      <li><b>Check the Preview</b> to see how the post will look on each platform.</li>
+    </ol>
+    <h3 style="margin-top:20px">Then choose what to do</h3>
+    <div class="buttons">
+      <div class="box"><span class="ui">Save draft</span><p>Keep working on it later.</p></div>
+      <div class="box"><span class="ui">Schedule</span><p>Pick a date and time and it goes out automatically.</p></div>
+      <div class="box"><span class="ui">Publish now</span><p>Send it live straight away.</p></div>
+    </div>
+    <div class="tip"><b>Tip:</b> For reels you can add a hook, voice-over and subtitles. Tick <i>Also share reel to feed</i> so it shows on your Instagram grid too.</div>
+  </section>
+
+  <!-- 5. AI + tools -->
+  <section class="sheet page-break">
+    <div class="section-head"><div class="badge">5</div><div><h2>AI Studio &amp; planning tools</h2><p>Everything else you need to keep your content running smoothly.</p></div></div>
+    <div class="grid-2">
+      <div class="box">
+        <h3>✨ AI Studio</h3>
+        <p>Enter a topic (e.g. "Diwali offer on billing software"), your audience, offer, tone and language. Get ready-to-use captions, images or reel scripts for each platform.</p>
+      </div>
+      <div class="box">
+        <h3>📅 Calendar</h3>
+        <p>See every scheduled and published post by day, week or month. Click a post to schedule or reschedule it.</p>
+      </div>
+      <div class="box">
+        <h3>🎯 Campaigns</h3>
+        <p>Group related posts, like a festive sale or a product launch, under one campaign with an objective, and track them together.</p>
+      </div>
+      <div class="box">
+        <h3>🖼️ Media Library</h3>
+        <p>Drag and drop your images and videos, sort them into folders and find them by name or tag when you build a post.</p>
+      </div>
+      <div class="box">
+        <h3>📊 Analytics</h3>
+        <p>Track reach, engagement and followers. Compare platforms and see your best-performing content. Click <span class="ui">Sync now</span> for the latest numbers.</p>
+      </div>
+      <div class="box">
+        <h3>💳 Subscription</h3>
+        <p>See your current plan, how much of each limit you've used this month, and upgrade at any time.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. Help -->
+  <section class="sheet">
+    <div class="section-head"><div class="badge">?</div><div><h2>Common questions</h2><p>Quick fixes for the things people ask about most.</p></div></div>
+    <table>
+      <tr><td>The Connect button is greyed out</td><td>That platform hasn't been switched on for your workspace yet. Contact support and we'll enable it.</td></tr>
+      <tr><td>Google says "Access blocked"</td><td>Your Google account needs to be approved first. Send us the email you use for YouTube.</td></tr>
+      <tr><td>My Instagram account won't connect</td><td>Switch it to a Business or Creator account in the Instagram app, link it to your Facebook Page, then try again.</td></tr>
+      <tr><td>A post failed to publish</td><td>Open it from <b>Published</b> or <b>All posts</b>, read the message shown, fix it (often an expired account or a file that's too large) and click <span class="ui">Retry failed</span>.</td></tr>
+      <tr><td>My scheduled post went out at the wrong time</td><td>Check the timezone in your brand settings. Posts are scheduled in the brand's timezone.</td></tr>
+      <tr><td>How do I stop posting to an account?</td><td>On <b>Social Accounts</b>, click the bin icon next to it to disconnect. You can also remove access from your Facebook, Google or LinkedIn settings.</td></tr>
+    </table>
+  </section>
+
+  <section class="sheet footer">
+    <div class="logo"><span class="mark">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg>
+    </span> SocialPilot AI</div>
+    <p style="margin-top:10px">Need a hand? Contact our support team and we'll help you get set up.</p>
+  </section>
+
+</div>
+</body>
+</html>
