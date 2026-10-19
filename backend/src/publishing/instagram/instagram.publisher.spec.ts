@@ -56,7 +56,7 @@ const ctx = (over: Partial<PublishContext> = {}): PublishContext =>
 describe('InstagramPublisher', () => {
   it('publishes a single image: container (JPEG URL) -> wait FINISHED -> media_publish', async () => {
     const graph = graphMock();
-    const publisher = new InstagramPublisher(graph as never);
+    const publisher = new InstagramPublisher(graph as never, graphMock() as never);
     const result = await publisher.publishPost(ctx());
 
     expect(graph.post).toHaveBeenNthCalledWith(1, '/17841400000000000/media', { image_url: 'https://cdn.example.com/a.publish.jpg', caption: 'Hello #diwali' }, 'page-token');
@@ -66,7 +66,7 @@ describe('InstagramPublisher', () => {
 
   it('publishes a reel and uploads bytes via resumable upload when the URL is not public', async () => {
     const graph = graphMock();
-    const publisher = new InstagramPublisher(graph as never);
+    const publisher = new InstagramPublisher(graph as never, graphMock() as never);
     const video = media({ kind: 'video', mimeType: 'video/mp4', isPubliclyReachable: false, url: 'http://localhost:3000/uploads/v.mp4' });
     await publisher.publishVideo(ctx({ contentType: ContentType.REEL, media: [video] }));
 
@@ -74,15 +74,42 @@ describe('InstagramPublisher', () => {
     expect(graph.ruploadBinary).toHaveBeenCalledTimes(1);
   });
 
+  it('uses the Instagram Login client for accounts connected with the separate Instagram app', async () => {
+    const graph = graphMock();
+    const igGraph = graphMock();
+    const publisher = new InstagramPublisher(graph as never, igGraph as never);
+    await publisher.publishPost(
+      ctx({ account: { platformAccountId: '17841400000000000', platform: SocialPlatform.INSTAGRAM, metadata: { loginType: 'instagram' } } as never }),
+    );
+
+    expect(igGraph.post).toHaveBeenLastCalledWith('/17841400000000000/media_publish', { creation_id: 'container-1' }, 'page-token');
+    expect(graph.post).not.toHaveBeenCalled();
+  });
+
+  it('refreshes Instagram Login tokens and leaves Facebook Login page tokens alone', async () => {
+    const expiresAt = new Date('2026-12-01T00:00:00Z');
+    const igGraph = { ...graphMock(), refreshLongLivedToken: jest.fn(async () => ({ accessToken: 'new-token', expiresAt })) };
+    const publisher = new InstagramPublisher(graphMock() as never, igGraph as never);
+    const creds = { accessToken: 'old-token', scopes: 'instagram_business_basic' };
+
+    await expect(publisher.refreshToken({ metadata: { loginType: 'instagram' } } as never, creds)).resolves.toEqual({
+      accessToken: 'new-token',
+      expiresAt,
+      scopes: 'instagram_business_basic',
+    });
+    expect(igGraph.refreshLongLivedToken).toHaveBeenCalledWith('old-token');
+    await expect(publisher.refreshToken({ metadata: { pageId: 'p1' } } as never, creds)).resolves.toBeNull();
+  });
+
   it('fails when Instagram reports a container processing error', async () => {
     const graph = graphMock();
     graph.get.mockResolvedValueOnce({ status_code: 'ERROR', status: 'Unsupported format' });
-    const publisher = new InstagramPublisher(graph as never);
+    const publisher = new InstagramPublisher(graph as never, graphMock() as never);
     await expect(publisher.publishPost(ctx())).rejects.toMatchObject({ code: ErrorCode.PUBLISH_FAILED });
   });
 
   it('validation: requires public image URLs, max 30 hashtags, carousel 2-10 items, supported aspect ratios', () => {
-    const publisher = new InstagramPublisher(graphMock() as never);
+    const publisher = new InstagramPublisher(graphMock() as never, graphMock() as never);
     const errors = publisher.validateContent(
       ctx({
         contentType: ContentType.CAROUSEL,

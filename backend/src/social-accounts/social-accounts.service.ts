@@ -57,7 +57,7 @@ export class SocialAccountsService {
     const meta = callback(SocialPlatform.FACEBOOK, social.meta.redirectUri);
     this.redirectUris = {
       [SocialPlatform.FACEBOOK]: meta,
-      [SocialPlatform.INSTAGRAM]: meta,
+      [SocialPlatform.INSTAGRAM]: social.instagram.appId && social.instagram.appSecret ? callback(SocialPlatform.INSTAGRAM, social.instagram.redirectUri) : meta,
       [SocialPlatform.YOUTUBE]: callback(SocialPlatform.YOUTUBE, social.google.redirectUri),
       [SocialPlatform.LINKEDIN]: callback(SocialPlatform.LINKEDIN, social.linkedin.redirectUri),
     };

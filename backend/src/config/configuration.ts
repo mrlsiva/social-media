@@ -53,6 +53,8 @@ export interface AiConfig {
 
 export interface SocialConfig {
   meta: { appId: string; appSecret: string; redirectUri: string; graphVersion: string };
+  /** Separate Instagram app ("Instagram API with Instagram Login"). When unset, Instagram falls back to the Meta app. */
+  instagram: { appId: string; appSecret: string; redirectUri: string };
   google: { clientId: string; clientSecret: string; redirectUri: string };
   linkedin: { clientId: string; clientSecret: string; redirectUri: string; apiVersion: string };
 }
@@ -159,6 +161,11 @@ export default (): Configuration => {
         appSecret: env.META_APP_SECRET ?? '',
         redirectUri: env.META_REDIRECT_URI ?? '',
         graphVersion: env.META_GRAPH_VERSION ?? 'v25.0',
+      },
+      instagram: {
+        appId: env.INSTAGRAM_APP_ID ?? '',
+        appSecret: env.INSTAGRAM_APP_SECRET ?? '',
+        redirectUri: env.INSTAGRAM_REDIRECT_URI ?? '',
       },
       google: {
         clientId: env.GOOGLE_CLIENT_ID ?? '',

@@ -6,11 +6,12 @@ Callback URLs (replace the host with your public API URL in production — must 
 
 | Platform | Callback URL | Env vars |
 |---|---|---|
-| Facebook + Instagram (one Meta app) | `https://api.example.com/api/v1/social-accounts/facebook/callback` | `META_APP_ID`, `META_APP_SECRET`, `META_REDIRECT_URI`, `META_GRAPH_VERSION` |
+| Facebook (Meta app) | `https://api.example.com/api/v1/social-accounts/facebook/callback` | `META_APP_ID`, `META_APP_SECRET`, `META_REDIRECT_URI`, `META_GRAPH_VERSION` |
+| Instagram (separate Instagram app) | `https://api.example.com/api/v1/social-accounts/instagram/callback` | `INSTAGRAM_APP_ID`, `INSTAGRAM_APP_SECRET`, `INSTAGRAM_REDIRECT_URI` |
 | YouTube | `https://api.example.com/api/v1/social-accounts/youtube/callback` | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` |
 | LinkedIn | `https://api.example.com/api/v1/social-accounts/linkedin/callback` | `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`, `LINKEDIN_REDIRECT_URI`, `LINKEDIN_API_VERSION`, `LINKEDIN_SCOPES` |
 
-Instagram uses the same Meta app and `META_REDIRECT_URI` as Facebook; the callback works out which platform started the flow from the one-time `state`. For local development `http://localhost:3000/...` is accepted by Meta (development mode), Google and LinkedIn.
+When `INSTAGRAM_APP_ID` / `INSTAGRAM_APP_SECRET` are set, Instagram connects with its own app through **Instagram API with Instagram Login** (no Facebook Page needed; 60-day tokens refreshed automatically). When they are empty, Instagram falls back to the Meta app and `META_REDIRECT_URI` (Facebook Login + linked Page). Accounts keep working with whichever flow they were connected through; the callback works out which platform started the flow from the one-time `state`. For local development `http://localhost:3000/...` is accepted by Meta (development mode), Google and LinkedIn.
 
 After editing `.env`, restart the API. `GET /api/v1/social-accounts/platforms` shows `configured: true` for each platform that is ready.
 
@@ -33,6 +34,14 @@ Requirements & gotchas:
 - Instagram: max 100 API-published posts per 24 h per account; captions ≤ 2,200 chars; ≤ 30 hashtags; carousels 2-10 items; image aspect ratio 4:5 – 1.91:1. Feed videos are published as Reels.
 - Facebook Reels: max 30 API-published reels per 24 h per Page.
 - Page tokens obtained from a long-lived user token don't expire, but they are invalidated when the user changes password, removes the app or loses Page access → the account shows *Expired* and admins get a `token_expired` notification.
+
+## Instagram — separate app (Instagram API with Instagram Login)
+
+1. In your Meta app (or a new Business app) add the **Instagram** product.
+2. *Instagram → API setup with Instagram login*: copy the **Instagram app ID** / **Instagram app secret** → `INSTAGRAM_APP_ID`, `INSTAGRAM_APP_SECRET`. These differ from the Facebook App ID/secret.
+3. Under *Set up Instagram business login → Business login settings*, add the Instagram callback above as an OAuth redirect URI and set `INSTAGRAM_REDIRECT_URI` to the same value.
+4. Permissions requested: `instagram_business_basic`, `instagram_business_content_publish`, `instagram_business_manage_insights`.
+5. In development mode add the account under *App roles → Instagram testers* and accept the invite in Instagram. Going live needs **App Review**.
 
 ## Google — YouTube
 

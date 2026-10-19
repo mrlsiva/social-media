@@ -31,8 +31,8 @@ const RATE_LIMIT_CODES = new Set([4, 17, 32, 613, 80001, 80002, 80004]);
  */
 @Injectable()
 export class MetaGraphClient {
-  private readonly cfg: SocialConfig['meta'];
-  private readonly http: AxiosInstance;
+  protected readonly cfg: SocialConfig['meta'];
+  protected readonly http: AxiosInstance;
 
   constructor(config: ConfigService) {
     this.cfg = config.getOrThrow<SocialConfig>('social').meta;
@@ -142,7 +142,7 @@ export class MetaGraphClient {
     );
   }
 
-  private authParams(token?: string): Record<string, string> {
+  protected authParams(token?: string): Record<string, string> {
     if (!token) return {};
     return {
       access_token: token,
@@ -150,7 +150,7 @@ export class MetaGraphClient {
     };
   }
 
-  private async call<T>(fn: () => Promise<T>): Promise<T> {
+  protected async call<T>(fn: () => Promise<T>): Promise<T> {
     try {
       return await fn();
     } catch (err) {

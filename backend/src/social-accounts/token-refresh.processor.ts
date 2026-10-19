@@ -39,7 +39,7 @@ export class TokenRefreshProcessor extends WorkerHost implements OnModuleInit {
     if (job.name !== JOBS.TOKEN_REFRESH) return null;
     const expiring = await this.tokens.find({
       where: { expiresAt: LessThan(new Date(Date.now() + REFRESH_AHEAD_MS)) },
-      select: { id: true, socialAccountId: true, expiresAt: true, refreshTokenEncrypted: true },
+      select: { id: true, socialAccountId: true, expiresAt: true },
     });
     let refreshed = 0;
     let expired = 0;
@@ -49,7 +49,8 @@ export class TokenRefreshProcessor extends WorkerHost implements OnModuleInit {
     for (const token of expiring) {
       const account = accounts.find((a) => a.id === token.socialAccountId);
       if (!account) continue;
-      const result = token.refreshTokenEncrypted ? await this.tokenService.refresh(account) : null;
+      // Publishers return null when they cannot refresh (Instagram Login refreshes the access token itself).
+      const result = await this.tokenService.refresh(account);
       if (result) refreshed++;
       else if (token.expiresAt && token.expiresAt.getTime() <= Date.now()) {
         await this.tokenService.markExpired(account, 'Access token expired. Reconnect the account.');

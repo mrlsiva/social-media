@@ -19,7 +19,12 @@ import {
 } from '../interfaces/social-publisher.interface';
 import { pollUntil } from '../publisher-http';
 import { MetaGraphClient } from '../meta/meta-graph.client';
+import { InstagramGraphClient } from './instagram-graph.client';
 
+/** Scopes for "Instagram API with Instagram Login" (separate Instagram app). */
+const IG_LOGIN_SCOPES = ['instagram_business_basic', 'instagram_business_content_publish', 'instagram_business_manage_insights'];
+
+/** Scopes for "Instagram API with Facebook Login" (shared Meta app). */
 const SCOPES = [
   'instagram_basic',
   'instagram_content_publish',
@@ -32,7 +37,9 @@ const SCOPES = [
 type ContainerStatus = 'EXPIRED' | 'ERROR' | 'FINISHED' | 'IN_PROGRESS' | 'PUBLISHED';
 
 /**
- * Instagram professional accounts via "Instagram API with Facebook Login".
+ * Instagram professional accounts. New connections use "Instagram API with Instagram Login"
+ * when a separate Instagram app is configured, otherwise "Instagram API with Facebook Login"
+ * (via a Facebook Page). Each account remembers its flow in metadata.loginType.
  * Publishing is a two-step container flow:
  *   POST /{ig-user-id}/media  ->  (poll status_code)  ->  POST /{ig-user-id}/media_publish
  * Images are fetched by Instagram from a public URL (JPEG only). Videos use a public
@@ -52,17 +59,21 @@ export class InstagramPublisher implements SocialPublisher {
     supportsLinks: false,
   };
 
-  constructor(private readonly graph: MetaGraphClient) {}
+  constructor(
+    private readonly graph: MetaGraphClient,
+    private readonly igGraph: InstagramGraphClient,
+  ) {}
 
   isConfigured(): boolean {
-    return this.graph.isConfigured();
+    return this.igGraph.isConfigured() || this.graph.isConfigured();
   }
 
   connect({ state }: { state: string }): string {
-    return this.graph.authorizationUrl(SCOPES, state);
+    return this.igGraph.isConfigured() ? this.igGraph.authorizationUrl(IG_LOGIN_SCOPES, state) : this.graph.authorizationUrl(SCOPES, state);
   }
 
   async completeConnection({ code }: { code: string }): Promise<DiscoveredAccount[]> {
+    if (this.igGraph.isConfigured()) return this.completeInstagramLogin(code);
     const { accessToken } = await this.graph.exchangeCodeForLongLivedToken(code);
     const me = await this.graph.get<{ id: string }>('/me', { fields: 'id' }, accessToken);
     const pages = await this.graph.listPages(
@@ -87,13 +98,16 @@ export class InstagramPublisher implements SocialPublisher {
       });
   }
 
-  async refreshToken(): Promise<OAuthCredentials | null> {
-    return null; // Uses non-expiring page tokens; reconnect on revocation.
+  async refreshToken(account: SocialAccount, credentials: OAuthCredentials): Promise<OAuthCredentials | null> {
+    // Facebook Login accounts use non-expiring page tokens; reconnect on revocation.
+    if (!this.usesInstagramLogin(account)) return null;
+    const { accessToken, expiresAt } = await this.igGraph.refreshLongLivedToken(credentials.accessToken);
+    return { accessToken, expiresAt, scopes: credentials.scopes ?? IG_LOGIN_SCOPES.join(',') };
   }
 
   async validateAccount(account: SocialAccount, credentials: OAuthCredentials): Promise<AccountValidation> {
     try {
-      const res = await this.graph.get<{ id: string; username?: string; name?: string; profile_picture_url?: string }>(
+      const res = await this.api(account).get<{ id: string; username?: string; name?: string; profile_picture_url?: string }>(
         `/${account.platformAccountId}`,
         { fields: 'id,username,name,profile_picture_url' },
         credentials.accessToken,
@@ -134,7 +148,7 @@ export class InstagramPublisher implements SocialPublisher {
     let containerId: string;
 
     if (media.kind === 'image') {
-      const res = await this.graph.post<{ id: string }>(
+      const res = await this.api(ctx.account).post<{ id: string }>(
         `/${igId}/media`,
         { image_url: await media.jpegUrl(), ...(opts.carouselItem ? { is_carousel_item: true } : { caption: ctx.content.text }) },
         token,
@@ -157,7 +171,7 @@ export class InstagramPublisher implements SocialPublisher {
       await ctx.log('instagram.carousel', `Creating ${ctx.media.length} carousel item containers`);
       const children: string[] = [];
       for (const item of ctx.media) children.push(await this.uploadMedia(ctx, item, { carouselItem: true }));
-      const parent = await this.graph.post<{ id: string }>(
+      const parent = await this.api(ctx.account).post<{ id: string }>(
         `/${igId}/media`,
         { media_type: 'CAROUSEL', children: children.join(','), caption: ctx.content.text },
         ctx.credentials.accessToken,
@@ -182,9 +196,9 @@ export class InstagramPublisher implements SocialPublisher {
     return this.publishContainer(ctx, containerId);
   }
 
-  async getPublishingStatus(_account: SocialAccount, credentials: OAuthCredentials, id: string): Promise<PublishingStatus> {
+  async getPublishingStatus(account: SocialAccount, credentials: OAuthCredentials, id: string): Promise<PublishingStatus> {
     try {
-      const res = await this.graph.get<{ status_code?: ContainerStatus; permalink?: string }>(`/${id}`, { fields: 'status_code' }, credentials.accessToken);
+      const res = await this.api(account).get<{ status_code?: ContainerStatus; permalink?: string }>(`/${id}`, { fields: 'status_code' }, credentials.accessToken);
       if (!res.status_code || res.status_code === 'PUBLISHED' || res.status_code === 'FINISHED') return { status: 'published' };
       if (res.status_code === 'IN_PROGRESS') return { status: 'processing' };
       return { status: 'failed', detail: res.status_code };
@@ -193,8 +207,8 @@ export class InstagramPublisher implements SocialPublisher {
     }
   }
 
-  async fetchPostMetrics(_account: SocialAccount, credentials: OAuthCredentials, mediaId: string): Promise<PostMetrics> {
-    const base = await this.graph.get<{ like_count?: number; comments_count?: number }>(
+  async fetchPostMetrics(account: SocialAccount, credentials: OAuthCredentials, mediaId: string): Promise<PostMetrics> {
+    const base = await this.api(account).get<{ like_count?: number; comments_count?: number }>(
       `/${mediaId}`,
       { fields: 'like_count,comments_count' },
       credentials.accessToken,
@@ -202,7 +216,7 @@ export class InstagramPublisher implements SocialPublisher {
     const metrics: PostMetrics = { likes: base.like_count ?? 0, comments: base.comments_count ?? 0 };
     for (const metricSet of ['reach,saved,shares,views', 'reach,saved']) {
       try {
-        const insights = await this.graph.get<{ data: { name: string; values?: { value: number }[]; total_value?: { value: number } }[] }>(
+        const insights = await this.api(account).get<{ data: { name: string; values?: { value: number }[]; total_value?: { value: number } }[] }>(
           `/${mediaId}/insights`,
           { metric: metricSet },
           credentials.accessToken,
@@ -226,31 +240,62 @@ export class InstagramPublisher implements SocialPublisher {
   }
 
   async fetchAccountMetrics(account: SocialAccount, credentials: OAuthCredentials): Promise<AccountMetrics> {
-    const res = await this.graph.get<{ followers_count?: number }>(`/${account.platformAccountId}`, { fields: 'followers_count' }, credentials.accessToken);
+    const res = await this.api(account).get<{ followers_count?: number }>(`/${account.platformAccountId}`, { fields: 'followers_count' }, credentials.accessToken);
     return { followers: res.followers_count ?? 0 };
   }
 
   // ---------------------------------------------------------------- internals
 
+  private usesInstagramLogin(account: Pick<SocialAccount, 'metadata'>): boolean {
+    return account.metadata?.loginType === 'instagram';
+  }
+
+  /** Graph client matching the login flow the account was connected with. */
+  private api(account: Pick<SocialAccount, 'metadata'>): MetaGraphClient {
+    return this.usesInstagramLogin(account) ? this.igGraph : this.graph;
+  }
+
+  private async completeInstagramLogin(code: string): Promise<DiscoveredAccount[]> {
+    const { accessToken, expiresAt } = await this.igGraph.exchangeCodeForLongLivedToken(code);
+    const me = await this.igGraph.get<{ id: string; user_id?: string; username?: string; name?: string; profile_picture_url?: string }>(
+      '/me',
+      { fields: 'id,user_id,username,name,profile_picture_url' },
+      accessToken,
+    );
+    return [
+      {
+        platform: SocialPlatform.INSTAGRAM,
+        platformAccountId: String(me.user_id ?? me.id),
+        platformUserId: me.id,
+        accountName: me.name || me.username || 'Instagram',
+        accountType: 'instagram_business',
+        username: me.username ?? null,
+        profileImageUrl: me.profile_picture_url ?? null,
+        metadata: { loginType: 'instagram' },
+        credentials: { accessToken, expiresAt, scopes: IG_LOGIN_SCOPES.join(',') },
+      },
+    ];
+  }
+
   private async createVideoContainer(ctx: PublishContext, video: PublishMedia, params: Record<string, unknown>): Promise<string> {
     const igId = ctx.account.platformAccountId;
     const token = ctx.credentials.accessToken;
     if (video.isPubliclyReachable) {
-      const res = await this.graph.post<{ id: string }>(`/${igId}/media`, { ...params, video_url: video.url }, token);
+      const res = await this.api(ctx.account).post<{ id: string }>(`/${igId}/media`, { ...params, video_url: video.url }, token);
       return res.id;
     }
     // Local development / private storage: resumable upload of the bytes.
-    const res = await this.graph.post<{ id: string; uri?: string }>(`/${igId}/media`, { ...params, upload_type: 'resumable' }, token);
+    const res = await this.api(ctx.account).post<{ id: string; uri?: string }>(`/${igId}/media`, { ...params, upload_type: 'resumable' }, token);
     await ctx.log('instagram.upload', 'Uploading video bytes (resumable upload)', { containerId: res.id });
-    const uploadUrl = res.uri ?? `https://rupload.facebook.com/ig-api-upload/${this.graph.version}/${res.id}`;
-    await this.graph.ruploadBinary(uploadUrl, token, await video.toBlob());
+    const uploadUrl = res.uri ?? `https://rupload.facebook.com/ig-api-upload/${this.api(ctx.account).version}/${res.id}`;
+    await this.api(ctx.account).ruploadBinary(uploadUrl, token, await video.toBlob());
     return res.id;
   }
 
   private async waitForContainer(ctx: PublishContext, containerId: string): Promise<void> {
     await pollUntil(
       async () => {
-        const res = await this.graph.get<{ status_code: ContainerStatus; status?: string }>(
+        const res = await this.api(ctx.account).get<{ status_code: ContainerStatus; status?: string }>(
           `/${containerId}`,
           { fields: 'status_code,status' },
           ctx.credentials.accessToken,
@@ -267,14 +312,14 @@ export class InstagramPublisher implements SocialPublisher {
 
   private async publishContainer(ctx: PublishContext, creationId: string): Promise<PublishResult> {
     await ctx.log('instagram.publish', 'Publishing container', { creationId });
-    const published = await this.graph.post<{ id: string }>(
+    const published = await this.api(ctx.account).post<{ id: string }>(
       `/${ctx.account.platformAccountId}/media_publish`,
       { creation_id: creationId },
       ctx.credentials.accessToken,
     );
     let permalink: string | null = null;
     try {
-      permalink = (await this.graph.get<{ permalink?: string }>(`/${published.id}`, { fields: 'permalink' }, ctx.credentials.accessToken)).permalink ?? null;
+      permalink = (await this.api(ctx.account).get<{ permalink?: string }>(`/${published.id}`, { fields: 'permalink' }, ctx.credentials.accessToken)).permalink ?? null;
     } catch {
       /* permalink is optional */
     }

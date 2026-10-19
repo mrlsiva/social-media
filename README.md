@@ -134,7 +134,8 @@ All variables live in `backend/.env` (template: [`backend/.env.example`](backend
 | `TOKEN_ENCRYPTION_KEY` | yes | 32 random bytes, base64 — encrypts social tokens. `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`. Changing it invalidates stored connections. |
 | `AI_TEXT_PROVIDER`, `AI_IMAGE_PROVIDER`, `AI_VIDEO_PROVIDER` | no | Provider names (default `openai`). |
 | `OPENAI_API_KEY`, `OPENAI_TEXT_MODEL`, `OPENAI_IMAGE_MODEL`, `OPENAI_VIDEO_MODEL` | for AI | Without a key, AI endpoints answer `503 AI_PROVIDER_NOT_CONFIGURED`. |
-| `META_APP_ID`, `META_APP_SECRET`, `META_REDIRECT_URI`, `META_GRAPH_VERSION` | for FB/IG | Meta app (Facebook Login). |
+| `META_APP_ID`, `META_APP_SECRET`, `META_REDIRECT_URI`, `META_GRAPH_VERSION` | for FB/IG | Meta app (Facebook Login). Also used for Instagram when `INSTAGRAM_*` is empty. |
+| `INSTAGRAM_APP_ID`, `INSTAGRAM_APP_SECRET`, `INSTAGRAM_REDIRECT_URI` | for IG (optional) | Separate Instagram app (Instagram Login, no Facebook Page needed). |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` | for YouTube | Google OAuth client. |
 | `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`, `LINKEDIN_REDIRECT_URI`, `LINKEDIN_API_VERSION`, `LINKEDIN_SCOPES` | for LinkedIn | `LINKEDIN_API_VERSION` is the `YYYYMM` header; keep it within LinkedIn's supported window. |
 | `OAUTH_ALLOWED_RETURN_URLS` | no | Extra OAuth return targets, e.g. mobile deep link `socialpilot://oauth`. |

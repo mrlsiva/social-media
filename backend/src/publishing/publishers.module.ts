@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { FacebookPublisher } from './facebook/facebook.publisher';
+import { InstagramGraphClient } from './instagram/instagram-graph.client';
 import { InstagramPublisher } from './instagram/instagram.publisher';
 import { LinkedInPublisher } from './linkedin/linkedin.publisher';
 import { MetaGraphClient } from './meta/meta-graph.client';
@@ -13,6 +14,7 @@ import { YoutubePublisher } from './youtube/youtube.publisher';
 @Module({
   providers: [
     MetaGraphClient,
+    InstagramGraphClient,
     InstagramPublisher,
     FacebookPublisher,
     YoutubePublisher,

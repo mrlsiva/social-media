@@ -33,16 +33,18 @@ const GUIDES: Partial<Record<Platform, Guide>> = {
   instagram: {
     requirements: [
       'An Instagram <b>Professional</b> account (Business or Creator). Personal accounts cannot publish through the API.',
-      'The Instagram account must be <b>linked to a Facebook Page</b> you manage.',
-      'Instagram uses the same Meta app as Facebook. Setting it up once enables both.',
+      'You sign in with Instagram directly. No Facebook Page is needed.',
     ],
     console: { label: 'Meta for Developers', url: 'https://developers.facebook.com/apps' },
     steps: [
-      ...META_STEPS.slice(0, 4),
-      'Permissions requested: <span class="kbd">instagram_basic</span> <span class="kbd">instagram_content_publish</span> <span class="kbd">instagram_manage_insights</span> <span class="kbd">pages_show_list</span> <span class="kbd">pages_read_engagement</span> <span class="kbd">business_management</span>',
-      META_STEPS[4],
+      'Open <b>Meta for Developers</b> → <b>My Apps → Create app</b> (Business type) and add the <b>Instagram</b> product.',
+      'Go to <b>Instagram → API setup with Instagram login</b>. Under <b>Set up Instagram business login</b>, add the callback URL below as a redirect URL.',
+      'Copy the <b>Instagram app ID</b> and <b>Instagram app secret</b> from that page. They are different from the Facebook App ID.',
+      'Paste the values into <b>backend/.env</b> and restart the API.',
+      'Permissions requested: <span class="kbd">instagram_business_basic</span> <span class="kbd">instagram_business_content_publish</span> <span class="kbd">instagram_business_manage_insights</span>',
+      'While the app is in development mode, add your account under <b>App roles → Instagram testers</b> and accept the invite in Instagram. Going live needs <b>App Review</b>.',
     ],
-    env: META_ENV,
+    env: (callback) => `INSTAGRAM_APP_ID=your_instagram_app_id\nINSTAGRAM_APP_SECRET=your_instagram_app_secret\nINSTAGRAM_REDIRECT_URI=${callback}`,
     adminLimits: [
       'Instagram downloads media from <b>APP_URL</b>, so it must be a <b>public HTTPS</b> address. On localhost use a tunnel (ngrok / cloudflared).',
     ],
@@ -201,8 +203,7 @@ export class PlatformSetupGuide {
   });
   protected readonly callback = computed(() => {
     const p = this.platform();
-    const route = p.platform === 'instagram' ? 'facebook' : p.platform;
-    return p.redirectUri ?? `http://localhost:3000/api/v1/social-accounts/${route}/callback`;
+    return p.redirectUri ?? `http://localhost:3000/api/v1/social-accounts/${p.platform}/callback`;
   });
 
   copy(text: string) {
